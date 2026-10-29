@@ -310,9 +310,11 @@ interface AnaliseDreProps {
   empresa: Empresa
   onTrocarEmpresa: () => void
   onVoltar: () => void
+  /** Texto do botão de voltar (padrão: "Voltar ao dashboard") */
+  voltarLabel?: string
 }
 
-export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar }: AnaliseDreProps) {
+export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, voltarLabel = 'Voltar ao dashboard' }: AnaliseDreProps) {
   const storagePrefix = `dre:${empresa.id}`
   const [showWizard,     setShowWizard]     = useState(false)
   const [editingId,      setEditingId]      = useState<string | null>(null)
@@ -1384,7 +1386,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar }: A
       <header className={styles.header}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <button onClick={onVoltar} className={styles.backLink} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>← Voltar ao dashboard</button>
+            <button onClick={onVoltar} className={styles.backLink} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>← {voltarLabel}</button>
             <button onClick={onTrocarEmpresa} className={styles.btnTrocarEmpresa}>
               Trocar empresa
             </button>

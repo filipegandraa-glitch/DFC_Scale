@@ -16,6 +16,8 @@ interface Props {
   onSelecionar: (empresa: Empresa) => void
   /** Voltar para a home */
   onVoltar: () => void
+  /** Texto do botão de voltar (padrão: "Voltar") */
+  voltarLabel?: string
   /** Navegar para os termos de uso deste app */
   onVerTermos?: () => void
   contexto?: 'dre' | 'labs' | 'precificacao' | 'vendas'
@@ -323,6 +325,7 @@ function ConfirmDeleteModal({
 export default function EmpresaGatePage({
   onSelecionar,
   onVoltar,
+  voltarLabel = 'Voltar',
   onVerTermos,
   contexto = 'dre',
 }: Props) {
@@ -730,7 +733,7 @@ export default function EmpresaGatePage({
     <div className={styles.page}>
       <header className={styles.header}>
         <button className={styles.btnVoltar} onClick={onVoltar}>
-          ← Voltar
+          ← {voltarLabel}
         </button>
         <h1 className={styles.titulo}>
           {empresas.length === 0 ? textos.tituloSemEmpresas : textos.tituloComEmpresas}

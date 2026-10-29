@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.env
+.env.*
+!.env.example
+.claude
+.agents
+.vscode
+.DS_Store

@@ -4,26 +4,20 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { supabase } from './lib/supabase'
 import type { Empresa } from './lib/types'
 import AcceptInvitePage from './pages/AcceptInvitePage'
-import AdminSettingsPage from './pages/AdminSettingsPage'
 import AnaliseDrePage from './pages/AnaliseDrePage'
-import DashboardPage from './pages/DashboardPage'
-import type { DashboardRoutePath } from './pages/DashboardPage'
 import EmpresaGatePage from './pages/EmpresaGatePage'
-import LabControlPage from './pages/LabControlPage'
 import LoginPage from './pages/LoginPage'
-import PrecificacaoPage from './pages/PrecificacaoPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
-import VendasPage from './pages/VendasPage'
 import TermosPage from './pages/TermosPage'
 
-const KNOWN_PATHS = ['/', '/empresas', '/comunidade', '/suporte', '/analise-dre', '/admin-settings', '/lab-control', '/precificacao', '/vendas', '/vendas/listavendas'] as const
-const KNOWN_PATHS_SET = new Set<string>(KNOWN_PATHS)
-const DASHBOARD_PATHS = new Set<string>(['/', '/empresas', '/comunidade', '/suporte'])
-
-function normalizeAppPath(pathname: string) {
-  if (pathname.startsWith('/vendas/listavendas/')) return '/vendas/listavendas'
-  return KNOWN_PATHS_SET.has(pathname) ? pathname : '/'
-}
+// DFC Scale: fork do PainelGestaa com apenas a Análise DFC.
+// Rotas: '/' (DFC), '/termos' (termos de uso) e '/reset-password'.
+const DFC_PATH = '/'
+const TERMOS_PATH = '/termos'
+// Caminho do app DFC no cadastro de apps do PainelGestaa (tabela `apps`),
+// usado para respeitar a liberação de acesso feita pelo admin.
+const DFC_INTERNAL_LINK = '/analise-dre'
+const EMPRESA_STORAGE_KEY = 'empresa_selecionada'
 
 export interface User {
   name: string
@@ -47,15 +41,6 @@ async function sessionToUser(session: Session): Promise<User> {
   return { name, email }
 }
 
-function getProtectedAppPath(pathname: string) {
-  if (pathname === '/analise-dre/termospage') return '/analise-dre'
-  if (pathname === '/vendas/listavendas' || pathname.startsWith('/vendas/listavendas/')) return '/vendas'
-  if (pathname === '/analise-dre' || pathname === '/lab-control' || pathname === '/precificacao' || pathname === '/vendas') {
-    return pathname
-  }
-  return null
-}
-
 async function carregarAcessoUsuario(session: Session) {
   const { data: profile } = await supabase
     .from('profiles')
@@ -65,19 +50,15 @@ async function carregarAcessoUsuario(session: Session) {
 
   if (profile?.role !== 'admin' && profile?.ativo === false) {
     await supabase.auth.signOut()
-    return { permitido: false, isAdmin: false, allowedInternalPaths: null as string[] | null }
+    return { permitido: false, temAcessoDfc: false }
   }
 
   if (profile?.role === 'admin' || profile?.app_access_ids == null) {
-    return {
-      permitido: true,
-      isAdmin: profile?.role === 'admin',
-      allowedInternalPaths: null as string[] | null,
-    }
+    return { permitido: true, temAcessoDfc: true }
   }
 
   if (profile.app_access_ids.length === 0) {
-    return { permitido: true, isAdmin: false, allowedInternalPaths: [] as string[] }
+    return { permitido: true, temAcessoDfc: false }
   }
 
   const { data: apps, error: appsError } = await supabase
@@ -86,56 +67,69 @@ async function carregarAcessoUsuario(session: Session) {
     .in('id', profile.app_access_ids)
 
   if (appsError) {
-    return { permitido: true, isAdmin: false, allowedInternalPaths: null as string[] | null }
+    return { permitido: true, temAcessoDfc: true }
   }
 
-  const allowedInternalPaths = Array.from(
-    new Set(
-      (apps ?? [])
-        .map(app => {
-          const link = app.internal_link?.trim() ?? ''
-          if (!link || link.startsWith('http')) return ''
-          return link.startsWith('/') ? link : '/' + link
-        })
-        .filter(Boolean),
-    ),
+  const temAcessoDfc = (apps ?? []).some(app => {
+    const link = app.internal_link?.trim() ?? ''
+    if (!link || link.startsWith('http')) return false
+    return (link.startsWith('/') ? link : '/' + link) === DFC_INTERNAL_LINK
+  })
+
+  return { permitido: true, temAcessoDfc }
+}
+
+function restaurarEmpresa() {
+  try {
+    const stored = localStorage.getItem(EMPRESA_STORAGE_KEY)
+    return stored ? (JSON.parse(stored) as Empresa) : null
+  } catch {
+    return null
+  }
+}
+
+function Carregando() {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      height: '100vh', background: '#080808',
+    }}>
+      <div style={{
+        width: 28, height: 28,
+        border: '3px solid #1e1e1e',
+        borderTopColor: '#c9a22a',
+        borderRadius: '50%',
+        animation: 'spin 0.7s linear infinite',
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
   )
-
-  return { permitido: true, isAdmin: false, allowedInternalPaths }
 }
 
-async function sairDoFluxoRecuperacao() {
-  await supabase.auth.signOut()
-}
-
-function limparEmpresaSelecionada(pathname: string) {
-  if (pathname === '/analise-dre') {
-    localStorage.removeItem('empresa_selecionada')
-  }
-
-  if (pathname === '/lab-control') {
-    localStorage.removeItem('empresa_selecionada_lab_control')
-  }
-
-  if (pathname === '/precificacao') {
-    localStorage.removeItem('empresa_selecionada_precificacao')
-  }
-
-  if (pathname === '/vendas') {
-    localStorage.removeItem('empresa_selecionada_vendas')
-  }
+function SemAcesso({ onLogout }: { onLogout: () => void }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 16, height: '100vh', background: '#080808', color: '#e8e8e8', padding: 24, textAlign: 'center',
+    }}>
+      <h1 style={{ fontSize: 22, margin: 0 }}>Acesso à Análise DFC não liberado</h1>
+      <p style={{ color: '#9a9a9a', maxWidth: 420, margin: 0 }}>
+        Sua conta não tem permissão para usar a Análise DFC. Peça ao administrador para liberar o acesso.
+      </p>
+      <button
+        onClick={onLogout}
+        style={{
+          background: '#c9a22a', color: '#080808', border: 'none', borderRadius: 8,
+          padding: '10px 20px', fontWeight: 600, cursor: 'pointer',
+        }}
+      >
+        Sair
+      </button>
+    </div>
+  )
 }
 
 function App() {
-  const restaurarEmpresa = (key: string) => {
-    try {
-      const stored = localStorage.getItem(key)
-      return stored ? (JSON.parse(stored) as Empresa) : null
-    } catch {
-      return null
-    }
-  }
-
   const [user, setUser] = useState<User | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -144,24 +138,13 @@ function App() {
   const [isRecoveryFlow, setIsRecoveryFlow] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [termosAceitos, setTermosAceitos] = useState<boolean | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [allowedInternalPaths, setAllowedInternalPaths] = useState<string[] | null>(null)
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    const saved = localStorage.getItem('theme')
-    return saved === 'light' ? 'light' : 'dark'
-  })
-  const [mountedPaths, setMountedPaths] = useState<string[]>(['/'])
-  const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(() => restaurarEmpresa('empresa_selecionada'))
-  const [empresaSelecionadaLab, setEmpresaSelecionadaLab] = useState<Empresa | null>(() => restaurarEmpresa('empresa_selecionada_lab_control'))
-  const [empresaSelecionadaPrecificacao, setEmpresaSelecionadaPrecificacao] = useState<Empresa | null>(() => restaurarEmpresa('empresa_selecionada_precificacao'))
-  const [empresaSelecionadaVendas, setEmpresaSelecionadaVendas] = useState<Empresa | null>(() => restaurarEmpresa('empresa_selecionada_vendas'))
+  const [temAcessoDfc, setTemAcessoDfc] = useState(true)
+  const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(restaurarEmpresa)
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
-  }, [theme])
-
-  const toggleTheme = () => setTheme(current => current === 'dark' ? 'light' : 'dark')
+    const saved = localStorage.getItem('theme')
+    document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : 'dark')
+  }, [])
 
   const refreshAuthenticatedUser = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -169,48 +152,11 @@ function App() {
     if (!session) {
       setUser(null)
       setUserId(null)
-      setIsAdmin(false)
       return
     }
 
     setUser(await sessionToUser(session))
     setUserId(session.user.id)
-  }, [])
-
-  const updateAuthenticatedUserName = useCallback(async (nextName: string) => {
-    const trimmedName = nextName.trim()
-
-    if (!trimmedName) {
-      return 'Informe seu nome.'
-    }
-
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-      return 'Sessao expirada. Entre novamente para continuar.'
-    }
-
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({
-        name: trimmedName,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', session.user.id)
-
-    if (profileError) {
-      return profileError.message ?? 'Nao foi possivel salvar seu nome.'
-    }
-
-    await supabase.auth.updateUser({
-      data: {
-        full_name: trimmedName,
-        name: trimmedName,
-      },
-    })
-
-    setUser(current => current ? { ...current, name: trimmedName } : current)
-    return null
   }, [])
 
   const navigate = (path: string) => {
@@ -227,66 +173,45 @@ function App() {
       setIsRecoveryFlow(true)
     }
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const { permitido, isAdmin: nextIsAdmin, allowedInternalPaths: nextAllowedPaths } = await carregarAcessoUsuario(session)
-        if (permitido) {
-          setUser(await sessionToUser(session))
-          setUserId(session.user.id)
-          setAllowedInternalPaths(nextAllowedPaths)
-          setIsAdmin(nextIsAdmin)
-          if (session.user.email && hash.includes('type=invite')) {
-            setInviteEmail(session.user.email)
-          }
-        } else {
-          setUser(null)
-          setUserId(null)
-          setAllowedInternalPaths(null)
-          setIsAdmin(false)
-        }
-      } else {
-        setUser(null)
-        setUserId(null)
-        setAllowedInternalPaths(null)
-        setIsAdmin(false)
-      }
-      setLoading(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const aplicarSessao = async (session: Session | null, event?: string) => {
       if (!session) {
         setUser(null)
         setUserId(null)
         setTermosAceitos(null)
-        setAllowedInternalPaths(null)
-        setIsAdmin(false)
+        setTemAcessoDfc(true)
         setIsInviteFlow(false)
         setIsRecoveryFlow(false)
         return
       }
 
-      void (async () => {
-        const { permitido, isAdmin: nextIsAdmin, allowedInternalPaths: nextAllowedPaths } = await carregarAcessoUsuario(session)
-        if (permitido) {
-          setUser(await sessionToUser(session))
-          setUserId(session.user.id)
-          setAllowedInternalPaths(nextAllowedPaths)
-          setIsAdmin(nextIsAdmin)
-          if (event === 'SIGNED_IN' && session.user.email && window.location.hash.includes('type=invite')) {
-            setIsInviteFlow(true)
-            setInviteEmail(session.user.email)
-          }
-          if (event === 'PASSWORD_RECOVERY' || window.location.hash.includes('type=recovery')) {
-            setIsRecoveryFlow(true)
-          }
-        } else {
-          setUser(null)
-          setUserId(null)
-          setTermosAceitos(null)
-          setAllowedInternalPaths(null)
-          setIsAdmin(false)
-        }
-      })()
+      const acesso = await carregarAcessoUsuario(session)
+      if (!acesso.permitido) {
+        setUser(null)
+        setUserId(null)
+        setTermosAceitos(null)
+        setTemAcessoDfc(true)
+        return
+      }
+
+      setUser(await sessionToUser(session))
+      setUserId(session.user.id)
+      setTemAcessoDfc(acesso.temAcessoDfc)
+      if (session.user.email && window.location.hash.includes('type=invite')) {
+        setIsInviteFlow(true)
+        setInviteEmail(session.user.email)
+      }
+      if (event === 'PASSWORD_RECOVERY' || window.location.hash.includes('type=recovery')) {
+        setIsRecoveryFlow(true)
+      }
+    }
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      await aplicarSessao(session)
+      setLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      void aplicarSessao(session, event)
     })
 
     return () => subscription.unsubscribe()
@@ -308,347 +233,127 @@ function App() {
   }, [userId])
 
   useEffect(() => {
-    if (termosAceitos === false && pathname === '/analise-dre') {
-      navigate('/analise-dre/termospage')
-    }
-  }, [pathname, termosAceitos])
-
-  useEffect(() => {
-    if (user && pathname === '/admin-settings' && !isAdmin) {
-      window.history.replaceState({}, '', '/')
-      setPathname('/')
-    }
-  }, [isAdmin, pathname, user])
-
-  useEffect(() => {
-    const appPath = getProtectedAppPath(pathname)
-    if (!user || !appPath || allowedInternalPaths === null) return
-
-    if (!allowedInternalPaths.includes(appPath)) {
-      limparEmpresaSelecionada(appPath)
-      if (appPath === '/analise-dre') {
-        setEmpresaSelecionada(null)
-      }
-      if (appPath === '/lab-control') {
-        setEmpresaSelecionadaLab(null)
-      }
-      if (appPath === '/precificacao') {
-        setEmpresaSelecionadaPrecificacao(null)
-      }
-      navigate('/')
-    }
-  }, [allowedInternalPaths, pathname, user])
-
-  useEffect(() => {
     const onPopState = () => setPathname(window.location.pathname)
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
-  useEffect(() => {
-    if (!user || isInviteFlow || pathname === '/analise-dre/termospage') return
-
-    const normalizedPath = pathname.startsWith('/vendas/listavendas') ? '/vendas' : normalizeAppPath(pathname)
-    setMountedPaths(prev => (
-      prev.includes(normalizedPath) ? prev : [...prev, normalizedPath]
-    ))
-  }, [isInviteFlow, pathname, user])
-
-  useEffect(() => {
-    if (user) return
-    setMountedPaths(['/'])
-  }, [user])
-
   const handleLogout = async () => {
-    localStorage.removeItem('empresa_selecionada')
-    localStorage.removeItem('empresa_selecionada_lab_control')
-    localStorage.removeItem('empresa_selecionada_precificacao')
-    localStorage.removeItem('empresa_selecionada_vendas')
+    localStorage.removeItem(EMPRESA_STORAGE_KEY)
+    setEmpresaSelecionada(null)
     await supabase.auth.signOut()
     setTermosAceitos(null)
     setUserId(null)
-    setIsAdmin(false)
+    window.history.replaceState({}, '', DFC_PATH)
+    setPathname(DFC_PATH)
   }
 
   const selecionarEmpresa = (emp: Empresa) => {
-    localStorage.setItem('empresa_selecionada', JSON.stringify(emp))
+    localStorage.setItem(EMPRESA_STORAGE_KEY, JSON.stringify(emp))
     setEmpresaSelecionada(emp)
   }
 
   const trocarEmpresa = useCallback(() => {
-    localStorage.removeItem('empresa_selecionada')
+    localStorage.removeItem(EMPRESA_STORAGE_KEY)
     setEmpresaSelecionada(null)
   }, [])
 
-  const selecionarEmpresaLab = (emp: Empresa) => {
-    localStorage.setItem('empresa_selecionada_lab_control', JSON.stringify(emp))
-    setEmpresaSelecionadaLab(emp)
-  }
-
-  const trocarEmpresaLab = useCallback(() => {
-    localStorage.removeItem('empresa_selecionada_lab_control')
-    setEmpresaSelecionadaLab(null)
-  }, [])
-
-  const selecionarEmpresaPrecificacao = (emp: Empresa) => {
-    localStorage.setItem('empresa_selecionada_precificacao', JSON.stringify(emp))
-    setEmpresaSelecionadaPrecificacao(emp)
-  }
-
-  const trocarEmpresaPrecificacao = useCallback(() => {
-    localStorage.removeItem('empresa_selecionada_precificacao')
-    setEmpresaSelecionadaPrecificacao(null)
-  }, [])
-
-  const selecionarEmpresaVendas = (emp: Empresa) => {
-    localStorage.setItem('empresa_selecionada_vendas', JSON.stringify(emp))
-    setEmpresaSelecionadaVendas(emp)
-  }
-
-  const trocarEmpresaVendas = useCallback(() => {
-    localStorage.removeItem('empresa_selecionada_vendas')
-    setEmpresaSelecionadaVendas(null)
-  }, [])
+  const resetPassword = (
+    <ErrorBoundary>
+      <ResetPasswordPage
+        recoveryMode={isRecoveryFlow}
+        onBack={() => {
+          setIsRecoveryFlow(false)
+          window.history.replaceState({}, '', DFC_PATH)
+          setPathname(DFC_PATH)
+        }}
+        onRecoveryComplete={async () => {
+          setIsRecoveryFlow(false)
+          await supabase.auth.signOut()
+          window.history.replaceState({}, '', DFC_PATH)
+          setPathname(DFC_PATH)
+        }}
+      />
+    </ErrorBoundary>
+  )
 
   if (loading) {
-    return (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', background: '#080808',
-      }}>
-        <div style={{
-          width: 28, height: 28,
-          border: '3px solid #1e1e1e',
-          borderTopColor: '#c9a22a',
-          borderRadius: '50%',
-          animation: 'spin 0.7s linear infinite',
-        }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    )
+    return <Carregando />
   }
 
-  if (user) {
-    if (isInviteFlow) {
-      return (
-        <ErrorBoundary>
-          <AcceptInvitePage
-            email={inviteEmail || user.email}
-            onSuccess={async () => {
-              await refreshAuthenticatedUser()
-              setIsInviteFlow(false)
-              window.history.replaceState({}, '', '/')
-              navigate('/')
-            }}
-          />
-        </ErrorBoundary>
-      )
-    }
-
-    if (pathname === '/reset-password') {
-      return (
-        <ErrorBoundary>
-          <ResetPasswordPage
-            recoveryMode={isRecoveryFlow}
-            onBack={() => {
-              setIsRecoveryFlow(false)
-              window.history.replaceState({}, '', '/')
-              setPathname('/')
-            }}
-            onRecoveryComplete={async () => {
-              setIsRecoveryFlow(false)
-              await sairDoFluxoRecuperacao()
-              window.history.replaceState({}, '', '/')
-              setPathname('/')
-            }}
-          />
-        </ErrorBoundary>
-      )
-    }
-
-    if (pathname === '/analise-dre/termospage') {
-      return (
-        <ErrorBoundary>
-          <TermosPage
-            userId={userId!}
-            userName={user.name}
-            onAceitar={() => {
-              setTermosAceitos(true)
-              navigate('/analise-dre')
-            }}
-          />
-        </ErrorBoundary>
-      )
-    }
-
-    if (pathname === '/analise-dre' && (termosAceitos === null || termosAceitos === false)) {
-      return (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          height: '100vh', background: '#080808',
-        }}>
-          <div style={{
-            width: 28, height: 28,
-            border: '3px solid #1e1e1e',
-            borderTopColor: '#c9a22a',
-            borderRadius: '50%',
-            animation: 'spin 0.7s linear infinite',
-          }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
-      )
-    }
-
-    const activePath = normalizeAppPath(pathname)
-
-    if (pathname !== activePath) {
-      window.history.replaceState({}, '', activePath)
-    }
-
-    return (
-      <>
-        {DASHBOARD_PATHS.has(activePath) && (
-          <div>
-            <ErrorBoundary>
-              <DashboardPage
-                user={user}
-                onLogout={handleLogout}
-                onUpdateUserName={updateAuthenticatedUserName}
-                theme={theme}
-                onToggleTheme={toggleTheme}
-                onNavigate={navigate}
-                dashboardPath={activePath as DashboardRoutePath}
-              />
-            </ErrorBoundary>
-          </div>
-        )}
-
-        {(activePath === '/analise-dre' || mountedPaths.includes('/analise-dre')) && termosAceitos === true && (
-          <div style={{ display: activePath === '/analise-dre' ? 'block' : 'none' }}>
-            {!empresaSelecionada ? (
-              <ErrorBoundary>
-                <EmpresaGatePage
-                  onSelecionar={selecionarEmpresa}
-                  onVoltar={() => navigate('/')}
-                  onVerTermos={() => navigate('/analise-dre/termospage')}
-                />
-              </ErrorBoundary>
-            ) : (
-              <ErrorBoundary>
-                <AnaliseDrePage
-                  empresa={empresaSelecionada}
-                  onTrocarEmpresa={trocarEmpresa}
-                  onVoltar={() => navigate('/')}
-                />
-              </ErrorBoundary>
-            )}
-          </div>
-        )}
-
-        {isAdmin && (activePath === '/admin-settings' || mountedPaths.includes('/admin-settings')) && (
-          <div style={{ display: activePath === '/admin-settings' ? 'block' : 'none' }}>
-            <ErrorBoundary>
-              <AdminSettingsPage onVoltar={() => navigate('/')} />
-            </ErrorBoundary>
-          </div>
-        )}
-
-        {(activePath === '/lab-control' || mountedPaths.includes('/lab-control')) && (
-          <div style={{ display: activePath === '/lab-control' ? 'block' : 'none' }}>
-            {!empresaSelecionadaLab ? (
-              <ErrorBoundary>
-                <EmpresaGatePage
-                  onSelecionar={selecionarEmpresaLab}
-                  onVoltar={() => navigate('/')}
-                  contexto="labs"
-                />
-              </ErrorBoundary>
-            ) : (
-              <ErrorBoundary>
-                <LabControlPage
-                  userId={userId!}
-                  empresa={empresaSelecionadaLab}
-                  onTrocarEmpresa={trocarEmpresaLab}
-                  onVoltar={() => navigate('/')}
-                />
-              </ErrorBoundary>
-            )}
-          </div>
-        )}
-
-        {(activePath === '/precificacao' || mountedPaths.includes('/precificacao')) && (
-          <div style={{ display: activePath === '/precificacao' ? 'block' : 'none' }}>
-            {!empresaSelecionadaPrecificacao ? (
-              <ErrorBoundary>
-                <EmpresaGatePage
-                  onSelecionar={selecionarEmpresaPrecificacao}
-                  onVoltar={() => navigate('/')}
-                  contexto="precificacao"
-                />
-              </ErrorBoundary>
-            ) : (
-              <ErrorBoundary>
-                <PrecificacaoPage
-                  empresa={empresaSelecionadaPrecificacao}
-                  onTrocarEmpresa={trocarEmpresaPrecificacao}
-                  onVoltar={() => navigate('/')}
-                />
-              </ErrorBoundary>
-            )}
-          </div>
-        )}
-
-        {((activePath === '/vendas' || activePath === '/vendas/listavendas') || mountedPaths.includes('/vendas')) && (
-          <div style={{ display: (activePath === '/vendas' || activePath === '/vendas/listavendas') ? 'block' : 'none' }}>
-            {!empresaSelecionadaVendas ? (
-              <ErrorBoundary>
-                <EmpresaGatePage
-                  onSelecionar={selecionarEmpresaVendas}
-                  onVoltar={() => navigate('/')}
-                  contexto="vendas"
-                />
-              </ErrorBoundary>
-            ) : (
-              <ErrorBoundary>
-                <VendasPage
-                  empresa={empresaSelecionadaVendas}
-                  userId={userId!}
-                  onTrocarEmpresa={trocarEmpresaVendas}
-                  onVoltar={() => navigate('/')}
-                  routeScreen={activePath === '/vendas/listavendas' ? 'sales' : 'launchpad'}
-                  routeSaleId={pathname.startsWith('/vendas/listavendas/') ? pathname.split('/').filter(Boolean)[2] : null}
-                  onNavigateVendas={navigate}
-                />
-              </ErrorBoundary>
-            )}
-          </div>
-        )}
-      </>
-    )
+  if (!user) {
+    if (pathname === '/reset-password') return resetPassword
+    return <LoginPage onForgotPassword={() => navigate('/reset-password')} />
   }
 
-  if (pathname === '/reset-password') {
+  if (isInviteFlow) {
     return (
       <ErrorBoundary>
-        <ResetPasswordPage
-          recoveryMode={isRecoveryFlow}
-          onBack={() => {
-            setIsRecoveryFlow(false)
-            window.history.replaceState({}, '', '/')
-            setPathname('/')
-          }}
-          onRecoveryComplete={async () => {
-            setIsRecoveryFlow(false)
-            await sairDoFluxoRecuperacao()
-            window.history.replaceState({}, '', '/')
-            setPathname('/')
+        <AcceptInvitePage
+          email={inviteEmail || user.email}
+          onSuccess={async () => {
+            await refreshAuthenticatedUser()
+            setIsInviteFlow(false)
+            window.history.replaceState({}, '', DFC_PATH)
+            navigate(DFC_PATH)
           }}
         />
       </ErrorBoundary>
     )
   }
 
-  return <LoginPage onForgotPassword={() => navigate('/reset-password')} />
+  if (pathname === '/reset-password') return resetPassword
+
+  if (!temAcessoDfc) {
+    return <SemAcesso onLogout={handleLogout} />
+  }
+
+  if (termosAceitos === null) {
+    return <Carregando />
+  }
+
+  if (pathname === TERMOS_PATH || termosAceitos === false) {
+    return (
+      <ErrorBoundary>
+        <TermosPage
+          userId={userId!}
+          userName={user.name}
+          onAceitar={() => {
+            setTermosAceitos(true)
+            navigate(DFC_PATH)
+          }}
+        />
+      </ErrorBoundary>
+    )
+  }
+
+  if (pathname !== DFC_PATH) {
+    window.history.replaceState({}, '', DFC_PATH)
+  }
+
+  if (!empresaSelecionada) {
+    return (
+      <ErrorBoundary>
+        <EmpresaGatePage
+          onSelecionar={selecionarEmpresa}
+          onVoltar={handleLogout}
+          voltarLabel="Sair"
+          onVerTermos={() => navigate(TERMOS_PATH)}
+        />
+      </ErrorBoundary>
+    )
+  }
+
+  return (
+    <ErrorBoundary>
+      <AnaliseDrePage
+        empresa={empresaSelecionada}
+        onTrocarEmpresa={trocarEmpresa}
+        onVoltar={handleLogout}
+        voltarLabel="Sair"
+      />
+    </ErrorBoundary>
+  )
 }
 
 export default App
