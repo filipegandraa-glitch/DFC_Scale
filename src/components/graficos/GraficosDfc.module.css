@@ -1,0 +1,248 @@
+/* Cores das séries — validadas para daltonismo (deutan/protan/tritan) contra o
+   fundo de cada tema. Verde puro × vermelho reprova; o verde-azulado passa. */
+.raiz,
+.mini,
+.card {
+  --serie-receita: #13a5a0;
+  --serie-despesa: #e06060;
+  --grade: rgba(255, 255, 255, 0.07);
+  --dica-fundo: #1e1e1e;
+  /* Fatias das roscas: paleta categórica validada (ordem fixa, pares vizinhos) */
+  --cat-1: #3987e5;
+  --cat-2: #d95926;
+  --cat-3: #199e70;
+  --cat-4: #c98500;
+  --cat-5: #d55181;
+  --cat-outros: #5f5e5a;
+}
+:global(html[data-theme="light"]) .raiz,
+:global(html[data-theme="light"]) .mini,
+:global(html[data-theme="light"]) .card {
+  --serie-receita: #0f8f7c;
+  --serie-despesa: #d64545;
+  --grade: rgba(0, 0, 0, 0.08);
+  --dica-fundo: #ffffff;
+  --cat-1: #2a78d6;
+  --cat-2: #eb6834;
+  --cat-3: #1baf7a;
+  --cat-4: #eda100;
+  --cat-5: #e87ba4;
+  --cat-outros: #b4b2ac;
+}
+
+.fundoReceita { background: var(--serie-receita); }
+.fundoDespesa { background: var(--serie-despesa); }
+.corReceita { background: var(--serie-receita); }
+.corDespesa { background: var(--serie-despesa); }
+
+/* ── Dica (tooltip) ── */
+
+.dica {
+  position: absolute;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 150px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--dica-fundo);
+  box-shadow: var(--shadow-dropdown, 0 8px 24px rgba(0, 0, 0, 0.4));
+  pointer-events: none;
+  white-space: nowrap;
+  text-align: left;
+}
+.dicaEsquerda { left: calc(100% + 6px); }
+.dicaDireita { right: calc(100% + 6px); }
+
+.dicaTitulo {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+.dicaLinha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.dicaLinha strong { font-weight: 700; }
+.dicaNome { color: var(--text-muted); font-size: 12px; }
+.dicaChave { width: 10px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+.dicaChaveVazia { width: 10px; flex-shrink: 0; }
+
+/* ── Mini colunas nos cards de resumo ── */
+
+.mini {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  width: 100%;
+  height: 40px;
+  margin-top: 12px;
+}
+.miniZero {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--grade);
+}
+.miniHit {
+  position: relative;
+  flex: 1;
+  max-width: 28px;
+  border-radius: 3px;
+  outline: none;
+  cursor: default;
+}
+.miniHit:focus-visible { box-shadow: 0 0 0 2px var(--gold); }
+.miniHitAtivo { background: var(--grade); }
+.miniBarra {
+  position: absolute;
+  left: 50%;
+  width: min(14px, 70%);
+  transform: translateX(-50%);
+  opacity: 0.45;
+}
+.miniBarraCima { border-radius: 3px 3px 0 0; }
+.miniBarraBaixo { border-radius: 0 0 3px 3px; }
+.miniAtual,
+.miniHitAtivo .miniBarra { opacity: 1; }
+
+/* ── Cards de gráfico ── */
+
+.raiz {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.card {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  min-width: 0;
+}
+
+.cardTopo { margin-bottom: 12px; }
+.titulo {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.subtitulo {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.vazio {
+  margin: 24px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── Rosca ── */
+
+.roscaCorpo {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.rosca {
+  position: relative;
+  flex-shrink: 0;
+  width: 148px;
+  height: 148px;
+}
+.roscaSvg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.fatia {
+  cursor: pointer;
+  transition: opacity 0.15s, stroke-width 0.15s;
+}
+.fatiaApagada { opacity: 0.3; }
+
+.roscaCentro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.roscaCentroValor {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+}
+.roscaCentroRotulo {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.roscaLegenda {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.roscaItem {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 1px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  outline: none;
+  cursor: default;
+}
+.roscaItem:focus-visible { box-shadow: inset 0 0 0 2px var(--gold); }
+.roscaItemAtivo { background: var(--grade); }
+.roscaChave { width: 10px; height: 10px; border-radius: 2px; }
+.roscaNome {
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.roscaNumeros {
+  grid-column: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.roscaValor {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.roscaPct {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}

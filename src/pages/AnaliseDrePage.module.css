@@ -414,7 +414,7 @@
   cursor: help;
   line-height: 1;
 }
-.statCard:hover .statInfoIcon { opacity: 0.9; }
+.statInfoIcon:hover { opacity: 0.9; }
 
 /* Tooltip — abre acima do card */
 .statTooltip {
@@ -436,7 +436,7 @@
   white-space: normal;
   box-shadow: 0 8px 32px rgba(0,0,0,0.6);
 }
-.statCard:hover .statTooltip { display: block; }
+.statInfoIcon:hover + .statTooltip { display: block; }
 
 /* Tons */
 .positiveCard {
@@ -1091,7 +1091,8 @@
 }
 .clfBlockHeader:hover { background: rgba(255,255,255,0.03); }
 
-.clfNome { font-size: 13px; color: var(--text); text-align: left; flex: 1; }
+.clfLeft { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; text-align: left; }
+.clfNome { font-size: 13px; color: var(--text); text-align: left; }
 .clfRight { display: flex; align-items: center; gap: 10px; }
 .clfCount { font-size: 11px; color: var(--text-dim); }
 .clfTotal { font-size: 13px; font-weight: 600; color: var(--gold-light); }
@@ -1903,6 +1904,140 @@ th { color: var(--text-muted); font-weight: 500; }
   border-left: 1px solid var(--border);
   padding-left: 16px;
 }
+
+/* ── Comparativo mensal: grade única, colunas alinhadas ──
+   Todas as linhas (cabeçalho, totalizadores, grupos e classificações) usam o
+   mesmo grid-template; os wrappers intermediários viram display: contents.
+   As linhas têm a mesma borda/padding à direita, então as colunas de largura
+   fixa batem entre si. A coluna de nome fica fixa à esquerda ao rolar. */
+
+/* As colunas se ajustam à largura disponível (fonte escala com o container);
+   só abaixo do mínimo a tabela rola para o lado, com a coluna de nomes fixa. */
+.dreScroll {
+  overflow-x: auto;
+  container-type: inline-size;
+}
+
+.accordionMeses {
+  --dre-label-w: 180px;
+  --dre-cell-w: minmax(84px, 1fr);
+  --dre-total-w: minmax(100px, 1.3fr);
+  --dre-chevron-w: 12px;
+  --dre-gap: 6px;
+  --dre-fs: clamp(12px, calc(100cqi / 100), 16px);
+  min-width: calc(
+    var(--dre-label-w)
+    + var(--dre-n) * (84px + var(--dre-gap))
+    + var(--dre-has-total) * (100px + var(--dre-gap))
+    + var(--dre-chevron-w) + 24px
+  );
+}
+
+.accordionMeses .totalizadorRow,
+.accordionMeses .grupoBlockHeader,
+.accordionMeses .clfBlockHeader,
+.dreHeaderRow {
+  display: grid;
+  grid-template-columns: var(--dre-grid);
+  column-gap: var(--dre-gap);
+  align-items: center;
+  padding-left: 0;
+  padding-right: 10px;
+}
+
+.accordionMeses .totalizadorValues,
+.accordionMeses .grupoBlockRight,
+.accordionMeses .mesColValues,
+.accordionMeses .clfRight { display: contents; }
+
+.accordionMeses .grupoBlock { overflow: clip; }
+
+/* Fundos opacos: a coluna fixa herda o fundo da linha e cobre os valores que rolam por baixo */
+.accordionMeses .totalizadorRow {
+  background: linear-gradient(rgba(255,255,255,0.025), rgba(255,255,255,0.025)), var(--bg-elevated);
+}
+.accordionMeses .totalizadorPositive {
+  background: linear-gradient(rgba(54,198,126,0.05), rgba(54,198,126,0.05)), var(--bg-elevated);
+}
+.accordionMeses .totalizadorNegative {
+  background: linear-gradient(rgba(255,108,108,0.05), rgba(255,108,108,0.05)), var(--bg-elevated);
+}
+.accordionMeses .clfBlockHeader { background: var(--bg-surface); }
+.accordionMeses .clfBlockHeader:hover { background: var(--bg-hover); }
+
+.accordionMeses .totalizadorLabel,
+.accordionMeses .grupoBlockLeft,
+.accordionMeses .clfLeft,
+.dreHeaderLabel {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding-left: 14px;
+  background: inherit;
+}
+
+.accordionMeses .grupoBlockLeft {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 10px;
+  align-content: center;
+}
+.accordionMeses .grupoBadge { grid-row: span 2; }
+.accordionMeses .grupoBlockNome { white-space: normal; line-height: 1.25; font-size: 14.5px; }
+.accordionMeses .grupoBlockCount { font-size: 11.5px; }
+.accordionMeses .totalizadorLabel { font-size: 12px; }
+
+
+.accordionMeses .clfLeft {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  padding-left: 46px;
+}
+.accordionMeses .clfNome { line-height: 1.3; font-size: 14px; }
+.accordionMeses .clfCount { font-size: 11px; }
+
+.accordionMeses .mesColLabel { display: none; }
+
+.accordionMeses .mesColCell {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: var(--dre-fs);
+  font-variant-numeric: tabular-nums;
+}
+.accordionMeses .mesColCell strong { font-size: 1em; }
+.accordionMeses .mesColCell .totalizadorPct {
+  min-width: 3.3em;
+  font-size: 0.82em;
+  text-align: right;
+}
+.accordionMeses .mesColTotal { padding-left: 8px; }
+
+.accordionMeses .chevronIcon,
+.accordionMeses .chevronSm { justify-self: end; }
+
+.dreHeaderRow {
+  border: 1px solid transparent;
+  padding-top: 2px;
+  padding-bottom: 6px;
+  background: var(--bg-elevated);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+/* Alinha o mês com o fim do valor (descontando a subcoluna de %) */
+.dreHeaderCell { text-align: right; padding-right: calc(var(--dre-fs) * 0.82 * 3.3 + 4px); }
+.dreHeaderCell.mesColTotal { padding-left: 8px; }
 
 /* ── Responsive ── */
 

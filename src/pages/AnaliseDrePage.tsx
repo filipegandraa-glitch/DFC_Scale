@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import * as XLSX from 'xlsx'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import styles from './AnaliseDrePage.module.css'
 import { supabase } from '../lib/supabase'
 import type { DreClassificacao, DreLancamento, Empresa, Database } from '../lib/types'
 import { DreAssistentePanel } from '../components/dre-assistente/DreAssistentePanel'
 import { ExtratoUpload } from '../components/extrato-upload/ExtratoUpload'
+import { exportarDfcAnalitico, exportarDfcCompleto, type LancamentoXlsx, type LinhaDfcXlsx } from '../lib/exportarXlsx'
+import { GraficosDfc, MiniColunas, type DadosRosca, type ItemTotal, type SerieMes } from '../components/graficos/GraficosDfc'
 import { useBackdropDismiss } from '../hooks/useBackdropDismiss'
 import { useSessionStorageState } from '../hooks/useSessionStorageState'
 import ModalTransition from '../components/ModalTransition'
@@ -35,6 +36,9 @@ const INITIAL_FORM: FormState = {
 const DEFAULT_AI_MODEL = 'gpt-4o-mini'
 
 const moeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+// Comparativo mensal: reais inteiros e sem o símbolo em cada célula (o cabeçalho indica
+// "valores em R$"), para os meses caberem lado a lado; o valor exato fica no title.
+const valorTabela = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
 const pct   = (v: number) => `${v.toFixed(1)}%`
 
 function isString(value: unknown): value is string {
@@ -227,15 +231,17 @@ function calcularKpis(lancamentos: DreLancamento[]) {
 
 // ── Components ──
 
-function StatCard({ title, value, hint, tone = 'default' }: {
+function StatCard({ title, value, hint, tone = 'default', children }: {
   title: string; value: string; hint: string; tone?: 'default' | 'positive' | 'negative'
+  children?: ReactNode
 }) {
   return (
     <article className={`${styles.statCard} ${tone === 'positive' ? styles.positiveCard : ''} ${tone === 'negative' ? styles.negativeCard : ''}`}>
-      <span className={styles.statTooltip}>{hint}</span>
       <span className={styles.statInfoIcon}>ⓘ</span>
+      <span className={styles.statTooltip}>{hint}</span>
       <strong className={styles.statValue}>{value}</strong>
       <span className={styles.statTitle}>{title}</span>
+      {children}
     </article>
   )
 }
@@ -346,6 +352,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
   const [showAssistente,   setShowAssistente]   = useState(false)
   const [showUpload,       setShowUpload]       = useState(false)
   const [showExportModal,  setShowExportModal]  = useState(false)
+  const [exportando,       setExportando]       = useState(false)
   // Admin
   const [isAdmin,          setIsAdmin]          = useState(false)
   const [canExcluirPeriodo, setCanExcluirPeriodo] = useState(false)
@@ -621,6 +628,64 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
         return b.total - a.total
       })
   }, [lancamentosFiltrados, tipoMap, classificacaoToGrupo])
+
+  // ── Séries dos gráficos (mesmo recorte dos cards: lancamentosFiltrados) ────
+  const serieMensal = useMemo<SerieMes[]>(() => {
+    const porMes = new Map<string, SerieMes>()
+    for (const item of lancamentosFiltrados) {
+      const src = item.data_lancamento ?? item.created_at
+      if (!src) continue
+      const chave = src.slice(0, 7)
+      if (!porMes.has(chave)) porMes.set(chave, { chave, label: '', receitas: 0, despesas: 0 })
+      const tipo = item.tipo
+        ?? tipoMap[item.classificacao]
+        ?? (item.classificacao === 'receita' ? 'receita' : 'despesa')
+      const m = porMes.get(chave)!
+      if (tipo === 'receita') m.receitas += Number(item.valor)
+      else                   m.despesas += Number(item.valor)
+    }
+    const meses = [...porMes.values()].sort((a, b) => a.chave.localeCompare(b.chave))
+    const variosAnos = new Set(meses.map(m => m.chave.slice(0, 4))).size > 1
+    const formatter = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
+    for (const m of meses) {
+      const nomeMes = formatter.format(new Date(`${m.chave}-01T00:00:00Z`)).replace('.', '')
+      m.label = variosAnos ? `${nomeMes}/${m.chave.slice(2, 4)}` : nomeMes
+    }
+    return meses
+  }, [lancamentosFiltrados, tipoMap])
+
+  // Roscas: totais do recorte atual + a ordem no histórico inteiro da empresa,
+  // que fixa a cor de cada fatia (filtrar o período não repinta o gráfico).
+  const dadosRoscas = useMemo(() => {
+    const tipoDe = (l: DreLancamento) => l.tipo
+      ?? tipoMap[l.classificacao]
+      ?? (l.classificacao === 'receita' ? 'receita' : 'despesa')
+    const grupoDe = (l: DreLancamento) => l.grupo?.trim() || classificacaoToGrupo[l.classificacao] || 'Sem grupo'
+    const itemDe = (l: DreLancamento) => l.classificacao || 'Sem classificação'
+
+    const somar = (lista: DreLancamento[], tipo: 'receita' | 'despesa', chave: (l: DreLancamento) => string) => {
+      const porChave = new Map<string, ItemTotal>()
+      for (const l of lista) {
+        if (tipoDe(l) !== tipo) continue
+        const nome = chave(l)
+        const item = porChave.get(nome) ?? { nome, total: 0, lancamentos: 0 }
+        item.total += Number(l.valor)
+        item.lancamentos += 1
+        porChave.set(nome, item)
+      }
+      return [...porChave.values()].sort((a, b) => b.total - a.total)
+    }
+    const dados = (tipo: 'receita' | 'despesa', chave: (l: DreLancamento) => string): DadosRosca => ({
+      itens: somar(lancamentosFiltrados, tipo, chave),
+      ordemGlobal: somar(lancamentos, tipo, chave).map(i => i.nome),
+    })
+
+    return {
+      receitas: dados('receita', itemDe),
+      despesasPorGrupo: dados('despesa', grupoDe),
+      despesasPorItem: dados('despesa', itemDe),
+    }
+  }, [lancamentos, lancamentosFiltrados, tipoMap, classificacaoToGrupo])
 
   // ── DRE ordered list com totalizadores ────────────────────────────────────
   const dreOrdenadoItems = useMemo<DreListItem[]>(() => {
@@ -1230,6 +1295,19 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
       .find(g => g.nome === nomeGrupo)
       ?.classificacoes.find(c => c.nome === nomeClt)?.total ?? 0
 
+  // Grade única para todas as linhas do comparativo mensal: cada mês vira uma coluna
+  // de largura fixa, então valores e % ficam alinhados entre grupos e totalizadores.
+  const dreGridStyle = useMemo<CSSProperties | undefined>(() => {
+    const n = dreComparativoPorMes.length
+    if (n === 0) return undefined
+    const temTotal = n > 1
+    return {
+      '--dre-n': n,
+      '--dre-has-total': temTotal ? 1 : 0,
+      '--dre-grid': `minmax(var(--dre-label-w), 2.1fr) repeat(${n}, var(--dre-cell-w))${temTotal ? ' var(--dre-total-w)' : ''} var(--dre-chevron-w)`,
+    } as CSSProperties
+  }, [dreComparativoPorMes.length])
+
   const getMesTotalizadorValor = (label: string, mesData: MesComparativoData): number => {
     const k = mesData.kpis
     switch (label) {
@@ -1245,139 +1323,105 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
 
   const periodoLabelExport = anoFiltro === 'todos' ? 'Todos os anos' : `${mesesFiltroLabel}, ${anoFiltro}`
 
+  const nomeArquivoEmpresa = empresa.nome
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+  const sufixoArquivoPeriodo = anoFiltro === 'todos' ? 'todos-os-anos' : anoFiltro
+
+  const executarExportacao = async (gerar: () => Promise<void>) => {
+    setExportando(true)
+    try {
+      await gerar()
+      setShowExportModal(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err), 'Não foi possível gerar a planilha.')
+    } finally {
+      setExportando(false)
+    }
+  }
+
   // ── Exportar relatório "Completo" em .xlsx, no mesmo layout do modelo de DFC, ─
   // respeitando os filtros de ano/mês/tipo/busca aplicados na tela.
-  const exportarRelatorioCompleto = () => {
+  const exportarRelatorioCompleto = () => executarExportacao(async () => {
     const meses = dreComparativoPorMes
     const mostrarTotal = meses.length !== 1
-    const pctDe = (valor: number, base: number) => (base > 0 ? Number(((valor / base) * 100).toFixed(1)) : 0)
+    const fracao = (valor: number, base: number) => (base > 0 ? valor / base : null)
+    const capitalizar = (t: string) => t.charAt(0).toUpperCase() + t.slice(1).replace('.', '')
 
-    const linhas: (string | number)[][] = []
-    const periodoLabel = anoFiltro === 'todos' ? 'Todos os anos' : anoFiltro
-    linhas.push([`Análise DFC — ${empresa.nome}`])
-    linhas.push([`Período: ${periodoLabel} · ${mesesFiltroLabel}`])
-    linhas.push([])
-
-    const header: (string | number)[] = ['Categoria']
-    if (meses.length === 0) {
-      header.push('Valor', '%')
-    } else {
-      meses.forEach(m => header.push(m.label, '%'))
-      if (mostrarTotal) header.push('Total', '%')
-    }
-    linhas.push(header)
-
-    // Nível de estrutura de tópicos (outline) por linha: grupo = 0 (visível),
-    // classificação = 1 (recolhida por padrão sob o grupo).
-    const niveis: number[] = linhas.map(() => 0)
-
-    const pushRow = (label: string, valorMes: (m: MesComparativoData) => number, valorTotal: number, nivel = 0) => {
-      const row: (string | number)[] = [label]
-      if (meses.length === 0) {
-        row.push(Number(valorTotal.toFixed(2)), pctDe(valorTotal, kpis.receitaOperacional))
-      } else {
-        meses.forEach(m => {
-          const v = valorMes(m)
-          row.push(Number(v.toFixed(2)), pctDe(v, m.kpis.receitaOperacional))
-        })
-        if (mostrarTotal) {
-          row.push(Number(valorTotal.toFixed(2)), pctDe(valorTotal, kpis.receitaOperacional))
-        }
-      }
-      linhas.push(row)
-      niveis.push(nivel)
+    const colunas = [...meses.map(m => capitalizar(m.label)), ...(mostrarTotal ? ['Total'] : [])]
+    const linhas: LinhaDfcXlsx[] = []
+    const pushRow = (rotulo: string, nivel: LinhaDfcXlsx['nivel'], valorMes: (m: MesComparativoData) => number, valorTotal: number) => {
+      linhas.push({
+        rotulo,
+        nivel,
+        valores: [
+          ...meses.map(m => {
+            const v = valorMes(m)
+            return { valor: v, pct: fracao(v, m.kpis.receitaOperacional) }
+          }),
+          ...(mostrarTotal ? [{ valor: valorTotal, pct: fracao(valorTotal, kpis.receitaOperacional) }] : []),
+        ],
+      })
     }
 
     dreOrdenadoItems.forEach(item => {
       if (item.kind === 'totalizador') {
-        pushRow(item.label, m => getMesTotalizadorValor(item.label, m), item.valor)
+        pushRow(item.label, 'totalizador', m => getMesTotalizadorValor(item.label, m), item.valor)
         return
       }
       const grupo = item.data
-      pushRow(grupo.nome, m => getMesGrupoTotal(grupo.nome, m), grupo.total)
+      pushRow(grupo.nome, 'grupo', m => getMesGrupoTotal(grupo.nome, m), grupo.total)
       grupo.classificacoes.forEach(clf => {
-        pushRow(`   ${clf.nome}`, m => getMesClfTotal(grupo.nome, clf.nome, m), clf.total, 1)
+        pushRow(clf.nome, 'classificacao', m => getMesClfTotal(grupo.nome, clf.nome, m), clf.total)
       })
     })
 
-    const ws = XLSX.utils.aoa_to_sheet(linhas)
-    // Estrutura de tópicos: controle +/- acima do grupo (grupo vem antes das
-    // classificações), com as classificações recolhidas por padrão.
-    ws['!outline'] = { above: true }
-    ws['!rows'] = niveis.map(nivel => (nivel > 0 ? { level: nivel, hidden: true } : { level: nivel }))
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'DFC')
-    const sufixoPeriodo = anoFiltro === 'todos' ? 'todos-os-anos' : anoFiltro
-    const nomeEmpresa = empresa.nome.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')
-    XLSX.writeFile(wb, `DFC_Completo_${nomeEmpresa}_${sufixoPeriodo}.xlsx`)
-    setShowExportModal(false)
-  }
+    await exportarDfcCompleto({
+      empresa: empresa.nome,
+      periodo: periodoLabelExport,
+      colunas,
+      linhas,
+      arquivo: `DFC_Completo_${nomeArquivoEmpresa}_${sufixoArquivoPeriodo}.xlsx`,
+    })
+  })
 
   // ── Exportar relatório "Analítico" em .xlsx: uma aba por mês, listando ────
   // cada lançamento individual (data, descrição, classificação, grupo, valor).
-  const exportarRelatorioAnalitico = () => {
+  const exportarRelatorioAnalitico = () => executarExportacao(async () => {
     const mesesEfetivos = mesesFiltro.length > 0 ? mesesFiltro : mesesOptions.map(m => m.value)
     const formatter = new Intl.DateTimeFormat('pt-BR', { month: 'long', timeZone: 'UTC' })
 
-    const wb = XLSX.utils.book_new()
-    const nomesUsados = new Set<string>()
-
-    const gerarAba = (itensDoMes: DreLancamento[], nomeAba: string) => {
-      const linhas: (string | number)[][] = [
-        ['Data', 'Descrição', 'Tipo', 'Classificação', 'Grupo', 'Valor'],
-      ]
-      itensDoMes
-        .slice()
-        .sort((a, b) => (a.data_lancamento ?? a.created_at).localeCompare(b.data_lancamento ?? b.created_at))
-        .forEach(item => {
-          const src = item.data_lancamento ?? item.created_at
-          const tipo = item.tipo ?? tipoMap[item.classificacao] ?? 'despesa'
-          linhas.push([
-            new Date(src).toLocaleDateString('pt-BR', { timeZone: 'UTC' }),
-            item.descricao ?? '',
-            tipo === 'receita' ? 'Receita' : 'Despesa',
-            item.classificacao ?? '',
-            item.grupo ?? '',
-            Number(Number(item.valor).toFixed(2)),
-          ])
-        })
-      const total = itensDoMes.reduce((s, item) => s + Number(item.valor), 0)
-      linhas.push([])
-      linhas.push(['', '', '', '', 'Total', Number(total.toFixed(2))])
-
-      const ws = XLSX.utils.aoa_to_sheet(linhas)
-      // Excel limita nomes de aba a 31 caracteres e não aceita alguns símbolos
-      let abaNome = nomeAba.replace(/[\\/?*[\]:]/g, '').slice(0, 31)
-      let sufixo = 2
-      while (nomesUsados.has(abaNome)) {
-        abaNome = `${nomeAba.slice(0, 28)}(${sufixo})`
-        sufixo += 1
+    const paraXlsx = (item: DreLancamento): LancamentoXlsx => {
+      const tipo = item.tipo ?? tipoMap[item.classificacao] ?? 'despesa'
+      return {
+        data: new Date(item.data_lancamento ?? item.created_at),
+        descricao: item.descricao ?? '',
+        tipo: tipo === 'receita' ? 'receita' : 'despesa',
+        classificacao: item.classificacao ?? '',
+        grupo: item.grupo ?? '',
+        valor: Number(item.valor),
       }
-      nomesUsados.add(abaNome)
-      XLSX.utils.book_append_sheet(wb, ws, abaNome)
     }
 
-    if (mesesEfetivos.length === 0) {
-      gerarAba(lancamentosFiltrados, 'Relatório')
-    } else {
-      mesesEfetivos.forEach(mes => {
-        const itensDoMes = lancamentosFiltrados.filter(item => {
-          const src = item.data_lancamento ?? item.created_at
-          return !!src && src.slice(5, 7) === mes
+    const abas = mesesEfetivos.length === 0
+      ? [{ nome: 'Relatório', titulo: `Lançamentos — ${periodoLabelExport}`, lancamentos: lancamentosFiltrados.map(paraXlsx) }]
+      : mesesEfetivos.map(mes => {
+          const label = formatter.format(new Date(`2000-${mes}-01T00:00:00Z`))
+          const nomeMes = label.charAt(0).toUpperCase() + label.slice(1)
+          const nome = anoFiltro === 'todos' ? nomeMes : `${nomeMes} ${anoFiltro}`
+          const lancamentosDoMes = lancamentosFiltrados.filter(item => {
+            const src = item.data_lancamento ?? item.created_at
+            return !!src && src.slice(5, 7) === mes
+          })
+          return { nome, titulo: `Lançamentos — ${nome}`, lancamentos: lancamentosDoMes.map(paraXlsx) }
         })
-        const label = formatter.format(new Date(`2000-${mes}-01T00:00:00Z`))
-        const nomeAba = anoFiltro === 'todos'
-          ? label.charAt(0).toUpperCase() + label.slice(1)
-          : `${label.charAt(0).toUpperCase()}${label.slice(1)} ${anoFiltro}`
-        gerarAba(itensDoMes, nomeAba)
-      })
-    }
 
-    const sufixoPeriodo = anoFiltro === 'todos' ? 'todos-os-anos' : anoFiltro
-    const nomeEmpresa = empresa.nome.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')
-    XLSX.writeFile(wb, `DFC_Analitico_${nomeEmpresa}_${sufixoPeriodo}.xlsx`)
-    setShowExportModal(false)
-  }
+    await exportarDfcAnalitico({
+      empresa: empresa.nome,
+      abas,
+      arquivo: `DFC_Analitico_${nomeArquivoEmpresa}_${sufixoArquivoPeriodo}.xlsx`,
+    })
+  })
 
   return (
     <div className={styles.page}>
@@ -1430,13 +1474,17 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
           value={moeda(totais.receitas)}
           tone="positive"
           hint="Soma de todas as entradas financeiras do período selecionado — receitas de serviços, repasses, convênios e qualquer lançamento classificado como receita."
-        />
+        >
+          <MiniColunas serie={serieMensal} campo="receitas" />
+        </StatCard>
         <StatCard
           title="Despesas"
           value={moeda(totais.despesas)}
           tone="negative"
           hint="Soma de todas as saídas financeiras do período — custos operacionais, folha, aluguel, insumos, impostos e qualquer lançamento classificado como despesa."
-        />
+        >
+          <MiniColunas serie={serieMensal} campo="despesas" />
+        </StatCard>
         <StatCard
           title="Resultado"
           value={moeda(resultado)}
@@ -1445,8 +1493,12 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
             ? 'Receitas superam as despesas — a empresa está no lucro neste período. Resultado = Receitas − Despesas.'
             : 'Despesas superam as receitas — a empresa está no prejuízo neste período. Resultado = Receitas − Despesas.'
           }
-        />
+        >
+          <MiniColunas serie={serieMensal} campo="resultado" />
+        </StatCard>
       </section>
+
+      <GraficosDfc {...dadosRoscas} />
 
       {/* ── KPI Cards ── */}
       {lancamentosFiltrados.length > 0 && (
@@ -1514,12 +1566,12 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <button className={styles.exportOptionBtn} onClick={exportarRelatorioAnalitico}>
-                  <span className={styles.exportOptionTitle}>Relatório Analítico</span>
+                <button className={styles.exportOptionBtn} onClick={exportarRelatorioAnalitico} disabled={exportando}>
+                  <span className={styles.exportOptionTitle}>{exportando ? 'Gerando planilha…' : 'Relatório Analítico'}</span>
                   <span className={styles.exportOptionDesc}>Uma aba por mês, com todos os lançamentos individuais (data, descrição, classificação, grupo e valor).</span>
                 </button>
-                <button className={styles.exportOptionBtn} onClick={exportarRelatorioCompleto}>
-                  <span className={styles.exportOptionTitle}>Relatório Completo</span>
+                <button className={styles.exportOptionBtn} onClick={exportarRelatorioCompleto} disabled={exportando}>
+                  <span className={styles.exportOptionTitle}>{exportando ? 'Gerando planilha…' : 'Relatório Completo'}</span>
                   <span className={styles.exportOptionDesc}>Visão consolidada da DFC — categorias por linha e meses por coluna, no layout oficial do modelo.</span>
                 </button>
               </div>
@@ -1708,7 +1760,20 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
             <button className={styles.emptyAction} onClick={openWizard}>Adicionar agora</button>
           </div>
         ) : (
-          <div className={styles.accordionList}>
+          <div className={dreGridStyle ? styles.dreScroll : undefined}>
+          <div className={`${styles.accordionList} ${dreGridStyle ? styles.accordionMeses : ''}`} style={dreGridStyle}>
+            {dreGridStyle && (
+              <div className={styles.dreHeaderRow}>
+                <span className={styles.dreHeaderLabel}>Conta · valores em R$</span>
+                {dreComparativoPorMes.map(m => (
+                  <span key={m.mes} className={styles.dreHeaderCell}>{m.label}</span>
+                ))}
+                {dreComparativoPorMes.length > 1 && (
+                  <span className={`${styles.dreHeaderCell} ${styles.mesColTotal}`}>Total</span>
+                )}
+                <span />
+              </div>
+            )}
             {dreOrdenadoItems.map((item) => {
               if (item.kind === 'totalizador') {
                 const tot = item as { kind: 'totalizador'; label: string; valor: number; pct?: number }
@@ -1728,18 +1793,19 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
                             return (
                               <div key={m.mes} className={styles.mesColCell}>
                                 <span className={styles.mesColLabel}>{m.label}</span>
-                                <strong className={styles.totalizadorValor}>{moeda(val)}</strong>
-                                {tot.pct !== undefined && <span className={styles.totalizadorPct}>{((val / base) * 100).toFixed(1)}%</span>}
+                                <strong className={styles.totalizadorValor} title={moeda(val)}>{valorTabela(val)}</strong>
+                                <span className={styles.totalizadorPct}>{tot.pct !== undefined ? `${((val / base) * 100).toFixed(1)}%` : ''}</span>
                               </div>
                             )
                           })}
                           {dreComparativoPorMes.length > 1 && (
                             <div className={`${styles.mesColCell} ${styles.mesColTotal}`}>
                               <span className={styles.mesColLabel}>Total</span>
-                              <strong className={styles.totalizadorValor}>{moeda(tot.valor)}</strong>
-                              {tot.pct !== undefined && <span className={styles.totalizadorPct}>{tot.pct.toFixed(1)}%</span>}
+                              <strong className={styles.totalizadorValor} title={moeda(tot.valor)}>{valorTabela(tot.valor)}</strong>
+                              <span className={styles.totalizadorPct}>{tot.pct !== undefined ? `${tot.pct.toFixed(1)}%` : ''}</span>
                             </div>
                           )}
+                          <span />
                         </>
                       ) : (
                         <>
@@ -1775,8 +1841,8 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
                             return (
                               <div key={m.mes} className={styles.mesColCell}>
                                 <span className={styles.mesColLabel}>{m.label}</span>
-                                <strong className={grupo.tipo === 'receita' ? styles.valorPositivo : styles.valorNegativo}>
-                                  {moeda(gVal)}
+                                <strong className={grupo.tipo === 'receita' ? styles.valorPositivo : styles.valorNegativo} title={moeda(gVal)}>
+                                  {valorTabela(gVal)}
                                 </strong>
                                 <span className={styles.totalizadorPct}>{gBase ? ((gVal / gBase) * 100).toFixed(1) + '%' : '—'}</span>
                               </div>
@@ -1785,8 +1851,8 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
                           {dreComparativoPorMes.length > 1 && (
                             <div className={`${styles.mesColCell} ${styles.mesColTotal}`}>
                               <span className={styles.mesColLabel}>Total</span>
-                              <strong className={grupo.tipo === 'receita' ? styles.valorPositivo : styles.valorNegativo}>
-                                {moeda(grupo.total)}
+                              <strong className={grupo.tipo === 'receita' ? styles.valorPositivo : styles.valorNegativo} title={moeda(grupo.total)}>
+                                {valorTabela(grupo.total)}
                               </strong>
                               <span className={styles.totalizadorPct}>{kpis.receitaOperacional > 0 ? ((grupo.total / kpis.receitaOperacional) * 100).toFixed(1) + '%' : '—'}</span>
                             </div>
@@ -1812,9 +1878,11 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
                         return (
                           <div key={cKey} className={styles.clfBlock}>
                             <button className={styles.clfBlockHeader} onClick={() => toggleClf(cKey)}>
-                              <span className={styles.clfNome}>{clf.nome}</span>
-                              <div className={styles.clfRight}>
+                              <span className={styles.clfLeft}>
+                                <span className={styles.clfNome}>{clf.nome}</span>
                                 <span className={styles.clfCount}>{clf.items.length} lançamento(s)</span>
+                              </span>
+                              <div className={styles.clfRight}>
                                 {dreComparativoPorMes.length > 0 ? (
                                   <div className={styles.mesColValues}>
                                     {dreComparativoPorMes.map(m => {
@@ -1823,7 +1891,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
                                       return (
                                         <div key={m.mes} className={styles.mesColCell}>
                                           <span className={styles.mesColLabel}>{m.label}</span>
-                                          <strong className={styles.clfTotal}>{moeda(cVal)}</strong>
+                                          <strong className={styles.clfTotal} title={moeda(cVal)}>{valorTabela(cVal)}</strong>
                                           <span className={styles.totalizadorPct}>{cBase ? ((cVal / cBase) * 100).toFixed(1) + '%' : '—'}</span>
                                         </div>
                                       )
@@ -1831,7 +1899,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
                                     {dreComparativoPorMes.length > 1 && (
                                       <div className={`${styles.mesColCell} ${styles.mesColTotal}`}>
                                         <span className={styles.mesColLabel}>Total</span>
-                                        <strong className={styles.clfTotal}>{moeda(clf.total)}</strong>
+                                        <strong className={styles.clfTotal} title={moeda(clf.total)}>{valorTabela(clf.total)}</strong>
                                         <span className={styles.totalizadorPct}>{kpis.receitaOperacional > 0 ? ((clf.total / kpis.receitaOperacional) * 100).toFixed(1) + '%' : '—'}</span>
                                       </div>
                                     )}
@@ -1887,6 +1955,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
                 </div>
               )
             })}
+          </div>
           </div>
         )}
       </section>
