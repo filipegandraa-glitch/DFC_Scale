@@ -21,6 +21,8 @@ interface Props {
   /** Navegar para os termos de uso deste app */
   onVerTermos?: () => void
   contexto?: 'dre' | 'labs' | 'precificacao' | 'vendas'
+  /** Nome do usuário logado, para a saudação */
+  nomeUsuario?: string
 }
 
 type EmpresaRoleMap = Record<string, EmpresaMembro['role']>
@@ -48,21 +50,33 @@ type EmpresaFormModalProps = {
   onCnpjChange: (value: string) => void
   onBackgroundChange: (file: File | null) => void
   onRemoveBackground: () => void
+  /** Só no modo editar: abre a confirmação de exclusão */
+  onExcluir?: () => void
+}
+
+// A maioria das contas tem 1 ou 2 empresas: a busca só aparece em listas longas.
+const LIMITE_SEM_BUSCA = 6
+const ULTIMA_EMPRESA_KEY = 'dfc_ultima_empresa'
+
+const lembrarUltimaEmpresa = (empresaId: string) => {
+  try { localStorage.setItem(ULTIMA_EMPRESA_KEY, empresaId) } catch { /* sem storage */ }
+}
+
+const iniciais = (nome: string) => {
+  const palavras = nome
+    .replace(/\(.*?\)/g, ' ')
+    .split(/\s+/)
+    .filter(p => p.length > 2)
+  const letras = (palavras.length >= 2 ? [palavras[0], palavras[1]] : [palavras[0] ?? nome])
+    .map(p => p.charAt(0))
+    .join('')
+  return letras.toLocaleUpperCase('pt-BR') || '?'
 }
 
 const IconSettings = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="3"/>
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-  </svg>
-)
-
-const IconTrash = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <polyline points="3 6 5 6 21 6"/>
-    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-    <path d="M10 11v6M14 11v6"/>
-    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
   </svg>
 )
 
@@ -113,6 +127,7 @@ function EmpresaFormModal({
   onCnpjChange,
   onBackgroundChange,
   onRemoveBackground,
+  onExcluir,
 }: EmpresaFormModalProps) {
   const [membros, setMembros] = useState<EmpresaMembroResumo[]>([])
   const [loadingMembros, setLoadingMembros] = useState(false)
@@ -186,7 +201,7 @@ function EmpresaFormModal({
             />
           </label>
           <label className={styles.label}>
-            Imagem de fundo do card
+            Logo ou imagem da empresa
             <input
               className={styles.input}
               type="file"
@@ -247,6 +262,16 @@ function EmpresaFormModal({
           )}
 
           <div className={styles.formActions}>
+            {modo === 'editar' && onExcluir && (
+              <button
+                type="button"
+                className={styles.btnExcluirLink}
+                onClick={onExcluir}
+                disabled={salvando}
+              >
+                Excluir empresa
+              </button>
+            )}
             <button
               type="button"
               className={styles.btnCancelar}
@@ -328,6 +353,7 @@ export default function EmpresaGatePage({
   voltarLabel = 'Voltar',
   onVerTermos,
   contexto = 'dre',
+  nomeUsuario,
 }: Props) {
   const [tipoUsuario, setTipoUsuario]     = useState<'titular' | 'colaborador'>('titular')
   const [empresas, setEmpresas]           = useState<EmpresaCard[]>([])
@@ -342,12 +368,14 @@ export default function EmpresaGatePage({
   const [cnpj, setCnpj]                   = useState('')
   const [salvando, setSalvando]           = useState(false)
   const [erro, setErro]                   = useToastErrorState()
-  const [hoveredId, setHoveredId]         = useState<string | null>(null)
   const [isSystemAdmin, setIsSystemAdmin] = useState(false)
   const [empresaRoles, setEmpresaRoles]   = useState<EmpresaRoleMap>({})
   const [backgroundFile, setBackgroundFile] = useState<File | null>(null)
   const [backgroundPreview, setBackgroundPreview] = useState('')
   const [backgroundMarkedForRemoval, setBackgroundMarkedForRemoval] = useState(false)
+  const [ultimaEmpresaId] = useState<string | null>(() => {
+    try { return localStorage.getItem(ULTIMA_EMPRESA_KEY) } catch { return null }
+  })
 
   const resetBackgroundPreview = (nextValue = '') => {
     setBackgroundPreview(current => {
@@ -664,6 +692,7 @@ export default function EmpresaGatePage({
       return
     }
 
+    lembrarUltimaEmpresa((data as Empresa).id)
     onSelecionar(data as Empresa)
   }
 
@@ -684,6 +713,13 @@ export default function EmpresaGatePage({
       return nomeEmpresa.includes(buscaNormalizada) || nomeDono.includes(buscaNormalizada)
     })
   }, [buscaNormalizada, empresas])
+
+  // Última empresa acessada vem primeiro; o resto mantém a ordem de criação.
+  const empresasOrdenadas = useMemo(() => {
+    if (!ultimaEmpresaId) return empresasFiltradas
+    const ultima = empresasFiltradas.find(e => e.id === ultimaEmpresaId)
+    return ultima ? [ultima, ...empresasFiltradas.filter(e => e.id !== ultimaEmpresaId)] : empresasFiltradas
+  }, [empresasFiltradas, ultimaEmpresaId])
 
   const textos = contexto === 'labs'
     ? {
@@ -710,11 +746,11 @@ export default function EmpresaGatePage({
           botaoSelecionar: 'Acessar precificação',
         }
     : {
-        tituloComEmpresas: 'Selecionar empresa',
+        tituloComEmpresas: 'Qual empresa você quer analisar?',
         tituloSemEmpresas: podeCriarEmpresa ? 'Criar sua primeira empresa' : 'Aguardando vinculo com empresa',
         subtituloComEmpresas: podeCriarEmpresa
-          ? 'Escolha a empresa que deseja analisar ou crie uma nova.'
-          : 'Escolha a empresa vinculada ao seu acesso para analisar os dados.',
+          ? 'Escolha a empresa para abrir a DFC ou cadastre uma nova.'
+          : 'Escolha a empresa vinculada ao seu acesso para abrir a DFC.',
         subtituloSemEmpresas: podeCriarEmpresa
           ? 'Para usar a Análise DFC, você precisa criar uma empresa.'
           : 'Seu acesso esta como colaborador. Um titular precisa vincular voce a uma empresa em Minhas empresas.',
@@ -729,120 +765,121 @@ export default function EmpresaGatePage({
     )
   }
 
+  const temEmpresas = empresas.length > 0
+  const mostrarBusca = empresas.length > LIMITE_SEM_BUSCA
+  const primeiroNome = nomeUsuario?.trim().split(/\s+/)[0]
+
+  const selecionar = (empresa: Empresa) => {
+    lembrarUltimaEmpresa(empresa.id)
+    onSelecionar(empresa)
+  }
+
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <button className={styles.btnVoltar} onClick={onVoltar}>
-          ← {voltarLabel}
+      <header className={styles.topo}>
+        <span className={styles.marca}>
+          <img src="/symbol-gold.svg" alt="" className={styles.simbolo} />
+          <span>DFC <strong>Scale</strong></span>
+        </span>
+        <button type="button" className={styles.btnSair} onClick={onVoltar}>
+          {voltarLabel}
         </button>
+      </header>
+
+      <main className={styles.conteudo}>
+        {primeiroNome && <p className={styles.eyebrow}>Olá, {primeiroNome}</p>}
         <h1 className={styles.titulo}>
-          {empresas.length === 0 ? textos.tituloSemEmpresas : textos.tituloComEmpresas}
+          {temEmpresas ? textos.tituloComEmpresas : textos.tituloSemEmpresas}
         </h1>
         <p className={styles.subtitulo}>
-          {empresas.length === 0
-            ? textos.subtituloSemEmpresas
-            : textos.subtituloComEmpresas}
+          {temEmpresas ? textos.subtituloComEmpresas : textos.subtituloSemEmpresas}
         </p>
-        {empresas.length > 0 && (
-          <label className={styles.searchWrap}>
-            <span className={styles.searchLabel}>Buscar empresa</span>
+
+        {mostrarBusca && (
+          <label className={styles.busca}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
+            </svg>
+            <span className={styles.srOnly}>Buscar empresa</span>
             <input
               type="search"
-              className={styles.searchInput}
+              className={styles.buscaInput}
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              placeholder="Busque por empresa ou criador"
+              placeholder={isSystemAdmin ? 'Buscar por empresa ou criador' : 'Buscar empresa'}
             />
           </label>
         )}
-      </header>
 
-      {empresas.length > 0 && empresasFiltradas.length === 0 && (
-        <p className={styles.emptyState}>
-          Nenhuma empresa encontrada para “{busca.trim()}”. Tente buscar pelo nome da empresa ou do criador.
-        </p>
-      )}
-
-      <div className={styles.grade}>
-        {empresasFiltradas.map(emp => {
-          const podeEditar = podeEditarEmpresa(emp.id)
-
-          return (
-            <div
-              key={emp.id}
-              className={styles.card}
-              style={{
-                backgroundImage: emp.card_background_url ? `url(${emp.card_background_url})` : undefined,
-                backgroundSize: emp.card_background_url ? 'cover' : undefined,
-                backgroundPosition: emp.card_background_url ? 'center' : undefined,
-              }}
-              onMouseEnter={() => setHoveredId(emp.id)}
-              onMouseLeave={() => setHoveredId(null)}
-            >
-              <div className={`${styles.overlay} ${hoveredId === emp.id ? styles.overlayHovered : ''}`} />
-              {podeEditar && (
-                <>
-                  <button
-                    type="button"
-                    className={styles.cardSettingsButton}
-                    title={`Editar ${emp.nome}`}
-                    aria-label={`Editar ${emp.nome}`}
-                    onClick={event => {
-                      event.stopPropagation()
-                      abrirModalEdicao(emp)
-                    }}
-                  >
-                    <IconSettings />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.cardDeleteButton}
-                    title={`Excluir ${emp.nome}`}
-                    aria-label={`Excluir ${emp.nome}`}
-                    onClick={event => {
-                      event.stopPropagation()
-                      abrirModalDelete(emp)
-                    }}
-                  >
-                    <IconTrash />
-                  </button>
-                </>
-              )}
-              <div className={styles.cardContent}>
-                <span className={styles.cardLabel}>EMPRESA</span>
-                <h3 className={styles.cardNome}>{emp.nome}</h3>
-                <p className={styles.cardDono}>
-                  Empresa de: {emp.donoNome ?? 'Usuário'}
-                </p>
-                {emp.cnpj && <p className={styles.cardCnpj}>{emp.cnpj}</p>}
-                <div className={`${styles.cardExpandable} ${hoveredId === emp.id ? styles.cardExpandableOpen : ''}`}>
-                  <button
-                    className={styles.btnSelecionar}
-                    onClick={() => onSelecionar(emp)}
-                  >
-                    {textos.botaoSelecionar}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-
-        {podeCriarEmpresa && (
-          <div
-            className={`${styles.card} ${styles.cardNova}`}
-            onMouseEnter={() => setHoveredId('__nova')}
-            onMouseLeave={() => setHoveredId(null)}
-            onClick={abrirModalCriacao}
-          >
-            <div className={`${styles.overlay} ${hoveredId === '__nova' ? styles.overlayHovered : ''}`} />
-            <div className={styles.cardContent}>
-              <div className={styles.iconPlus}>+</div>
-              <p className={styles.cardLabelNova}>Criar empresa</p>
-            </div>
-          </div>
+        {temEmpresas && empresasOrdenadas.length === 0 && (
+          <p className={styles.semResultado}>
+            Nenhuma empresa encontrada para “{busca.trim()}”.
+          </p>
         )}
-      </div>
+
+        {(temEmpresas || podeCriarEmpresa) && (
+          <ul className={styles.lista}>
+            {empresasOrdenadas.map(emp => {
+              const podeEditar = podeEditarEmpresa(emp.id)
+              const ehUltima = emp.id === ultimaEmpresaId && empresas.length > 1
+              const cnpjFormatado = emp.cnpj ? formatarCnpj(emp.cnpj) : ''
+
+              return (
+                <li key={emp.id} className={styles.item}>
+                  <button
+                    type="button"
+                    className={styles.itemPrincipal}
+                    onClick={() => selecionar(emp)}
+                    aria-label={`${textos.botaoSelecionar}: ${emp.nome}`}
+                  >
+                    {emp.card_background_url ? (
+                      <img src={emp.card_background_url} alt="" className={styles.avatarImg} />
+                    ) : (
+                      <span className={styles.avatar} aria-hidden>{iniciais(emp.nome)}</span>
+                    )}
+                    <span className={styles.itemTexto}>
+                      <span className={styles.itemNomeLinha}>
+                        <span className={styles.itemNome}>{emp.nome}</span>
+                        {ehUltima && <span className={styles.selo}>Último acesso</span>}
+                      </span>
+                      <span className={styles.itemDetalhe}>
+                        {cnpjFormatado && <>CNPJ {cnpjFormatado}</>}
+                        {isSystemAdmin && emp.donoNome && <>{cnpjFormatado ? ' · ' : ''}de {emp.donoNome}</>}
+                      </span>
+                    </span>
+                    <svg className={styles.itemSeta} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </button>
+                  {podeEditar && (
+                    <button
+                      type="button"
+                      className={styles.itemConfig}
+                      title={`Configurar ${emp.nome}`}
+                      aria-label={`Configurar ${emp.nome}`}
+                      onClick={() => abrirModalEdicao(emp)}
+                    >
+                      <IconSettings />
+                    </button>
+                  )}
+                </li>
+              )
+            })}
+
+            {podeCriarEmpresa && (
+              <li className={temEmpresas ? styles.itemNovaWrap : styles.itemNovaWrapDestaque}>
+                <button type="button" className={styles.itemNova} onClick={abrirModalCriacao}>
+                  <span className={styles.itemNovaIcone} aria-hidden>+</span>
+                  <span className={styles.itemTexto}>
+                    <span className={styles.itemNome}>{temEmpresas ? 'Nova empresa' : 'Criar empresa'}</span>
+                    <span className={styles.itemDetalhe}>Só precisa do nome e do CNPJ.</span>
+                  </span>
+                </button>
+              </li>
+            )}
+          </ul>
+        )}
+      </main>
 
       {modalModo && (
         <EmpresaFormModal
@@ -859,6 +896,11 @@ export default function EmpresaGatePage({
           onCnpjChange={setCnpj}
           onBackgroundChange={handleBackgroundChange}
           onRemoveBackground={handleRemoveBackground}
+          onExcluir={empresaEmEdicao ? () => {
+            const alvo = empresas.find(e => e.id === empresaEmEdicao.id)
+            resetModalState()
+            if (alvo) abrirModalDelete(alvo)
+          } : undefined}
         />
       )}
 
@@ -873,22 +915,9 @@ export default function EmpresaGatePage({
       )}
 
       {onVerTermos && (
-        <footer style={{ textAlign: 'center', padding: '24px 0 32px', marginTop: 8 }}>
-          <button
-            type="button"
-            onClick={onVerTermos}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 12,
-              color: '#555',
-              textDecoration: 'underline',
-              textUnderlineOffset: 3,
-              padding: 0,
-            }}
-          >
-            Termos de Uso e Política de Privacidade — DFC ClinicScale
+        <footer className={styles.rodape}>
+          <button type="button" className={styles.linkTermos} onClick={onVerTermos}>
+            Termos de Uso e Política de Privacidade
           </button>
         </footer>
       )}

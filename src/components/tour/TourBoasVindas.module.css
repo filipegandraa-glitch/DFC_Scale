@@ -1,0 +1,397 @@
+/* Tour de boas-vindas — identidade ClinicScale.
+   Painel Marfim sobre fundo escuro desfocado; Sora nos títulos, Hanken no corpo.
+   Fica igual nos temas claro e escuro do app. */
+.overlay {
+  --cs-grafite:   #16140f;
+  --cs-tinta:     #131109;
+  --cs-marfim:    #f4efe3;
+  --cs-dourado:   #c2a063;
+  --cs-ouro-txt:  #7e6234; /* dourado escurecido para texto sobre marfim (contraste AA) */
+  --cs-linha:     rgba(19, 17, 9, 0.1);
+  --cs-texto-2:   rgba(19, 17, 9, 0.68);
+
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(10, 9, 6, 0.62);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.painel {
+  width: 100%;
+  max-width: 760px;
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: var(--cs-marfim);
+  color: var(--cs-tinta);
+  border-radius: 20px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.45);
+  font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  outline: none;
+}
+
+/* ── Cabeçalho ── */
+.cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid var(--cs-linha);
+}
+
+.titulo {
+  font-family: 'Sora', 'Segoe UI', system-ui, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.subtitulo {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--cs-texto-2);
+}
+
+.fechar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--cs-linha);
+  background: #fff;
+  color: var(--cs-tinta);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.fechar:hover { border-color: rgba(19, 17, 9, 0.3); }
+
+/* ── Corpo ── */
+.corpo {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px 8px;
+}
+
+.progresso {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+
+.traco,
+.tracoAtivo {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(19, 17, 9, 0.16);
+  transition: width 0.25s, background 0.25s;
+}
+
+.tracoAtivo {
+  width: 26px;
+  background: var(--cs-tinta);
+}
+
+.progressoTexto {
+  margin-left: 10px;
+  font-size: 13px;
+  color: var(--cs-texto-2);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.passo {
+  animation: passoEntra 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes passoEntra {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  margin-bottom: 20px;
+}
+
+.marca strong { font-weight: 800; }
+
+.simbolo { width: 22px; height: 22px; }
+
+.passoTitulo {
+  font-family: 'Sora', 'Segoe UI', system-ui, sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 14px;
+}
+
+.passoTexto {
+  max-width: 560px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--cs-texto-2);
+}
+
+/* Passo 1: equação do caixa */
+.equacao {
+  margin-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Sora', 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.equacao > span:not(.operador) {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--cs-linha);
+}
+
+.operador {
+  color: var(--cs-ouro-txt);
+  font-weight: 400;
+  font-size: 18px;
+}
+
+.equacao > span.resultado {
+  background: var(--cs-grafite);
+  border-color: var(--cs-grafite);
+  color: var(--cs-marfim);
+}
+
+.selo {
+  margin-top: 28px;
+  padding-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cs-ouro-txt);
+}
+
+/* Passo 2: recursos da tela */
+.recursos {
+  list-style: none;
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.recurso {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--cs-linha);
+  border-radius: 14px;
+}
+
+.recursoIcone {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid rgba(194, 160, 99, 0.45);
+  color: var(--cs-ouro-txt);
+}
+
+.recursoTitulo {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.recursoTexto {
+  margin-top: 4px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--cs-texto-2);
+}
+
+/* Passo 3: escolha de início */
+.opcoes {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.opcao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 20px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+  border: 1px solid var(--cs-linha);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.opcao:hover {
+  border-color: rgba(194, 160, 99, 0.7);
+  box-shadow: 0 8px 24px rgba(19, 17, 9, 0.08);
+  transform: translateY(-1px);
+}
+
+.opcaoIcone,
+.opcaoIconeEscuro {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  margin-bottom: 18px;
+  border: 1px solid var(--cs-linha);
+}
+
+.opcaoIconeEscuro {
+  background: var(--cs-grafite);
+  border-color: var(--cs-grafite);
+  color: var(--cs-marfim);
+}
+
+.opcaoTitulo {
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+.opcaoTexto {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--cs-texto-2);
+}
+
+/* ── Rodapé ── */
+.rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 32px;
+  padding: 20px 0 24px;
+  border-top: 1px solid var(--cs-linha);
+}
+
+.rodapeAcoes {
+  display: flex;
+  gap: 10px;
+}
+
+.link {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cs-ouro-txt);
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.passo > .link { margin: 20px 0 16px; }
+
+.link:hover { color: var(--cs-tinta); }
+
+.btnSecundario,
+.btnPrimario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  padding: 11px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btnSecundario {
+  background: transparent;
+  color: var(--cs-tinta);
+  border: 1px solid rgba(19, 17, 9, 0.18);
+}
+
+.btnSecundario:hover { border-color: rgba(19, 17, 9, 0.4); }
+
+.btnPrimario {
+  background: var(--cs-grafite);
+  color: var(--cs-marfim);
+  border: 1px solid var(--cs-grafite);
+}
+
+.btnPrimario:hover { background: #2a261c; }
+
+.fechar:focus-visible,
+.opcao:focus-visible,
+.link:focus-visible,
+.btnSecundario:focus-visible,
+.btnPrimario:focus-visible {
+  outline: 2px solid var(--cs-dourado);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .painel {
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+  }
+  .cabecalho { padding: 22px 20px 16px; }
+  .titulo { font-size: 20px; }
+  .corpo { padding: 20px 20px 8px; }
+  .rodape { margin: 0 20px; padding: 16px 0 20px; }
+  .passoTitulo { font-size: 24px; }
+  .recursos,
+  .opcoes { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .passo { animation: none; }
+  .opcao, .traco, .tracoAtivo { transition: none; }
+  .opcao:hover { transform: none; }
+}

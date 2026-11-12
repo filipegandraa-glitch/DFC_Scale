@@ -9,6 +9,7 @@ import { GraficosDfc, MiniColunas, type DadosRosca, type ItemTotal, type SerieMe
 import { useBackdropDismiss } from '../hooks/useBackdropDismiss'
 import { useSessionStorageState } from '../hooks/useSessionStorageState'
 import ModalTransition from '../components/ModalTransition'
+import { TourBoasVindas, useTourBoasVindas } from '../components/tour/TourBoasVindas'
 import { useToastErrorState } from '../hooks/useToastErrorState'
 import { toast } from '../lib/toast'
 
@@ -350,6 +351,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
     isTipoFiltro,
   )
   const [showAssistente,   setShowAssistente]   = useState(false)
+  const tour = useTourBoasVindas()
   const [showUpload,       setShowUpload]       = useState(false)
   const [showExportModal,  setShowExportModal]  = useState(false)
   const [exportando,       setExportando]       = useState(false)
@@ -1434,6 +1436,9 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
             <button onClick={onTrocarEmpresa} className={styles.btnTrocarEmpresa}>
               Trocar empresa
             </button>
+            <button onClick={tour.abrir} className={styles.btnTrocarEmpresa}>
+              Como usar
+            </button>
           </div>
           <h1>Análise DFC</h1>
           <p className={styles.subtitle}>
@@ -1583,6 +1588,15 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
           </div>
         )}
       </ModalTransition>
+
+      {/* ── Tour de boas-vindas (primeiro acesso) ── */}
+      <TourBoasVindas
+        aberto={tour.aberto}
+        onConcluir={tour.concluir}
+        onAdiar={tour.adiar}
+        onImportar={() => setShowUpload(true)}
+        onNovoLancamento={openWizard}
+      />
 
       {/* ── Modal Upload Extrato ── */}
       <ModalTransition open={showUpload}>

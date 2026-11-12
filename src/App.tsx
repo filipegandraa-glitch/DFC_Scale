@@ -6,13 +6,16 @@ import type { Empresa } from './lib/types'
 import AcceptInvitePage from './pages/AcceptInvitePage'
 import AnaliseDrePage from './pages/AnaliseDrePage'
 import EmpresaGatePage from './pages/EmpresaGatePage'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import TermosPage from './pages/TermosPage'
 
 // DFC Scale: fork do PainelGestaa com apenas a Análise DFC.
-// Rotas: '/' (DFC), '/termos' (termos de uso) e '/reset-password'.
+// Rotas: '/' (landing sem login, DFC com login), '/entrar' (login),
+// '/termos' (termos de uso) e '/reset-password'.
 const DFC_PATH = '/'
+const ENTRAR_PATH = '/entrar'
 const TERMOS_PATH = '/termos'
 // Caminho do app DFC no cadastro de apps do PainelGestaa (tabela `apps`),
 // usado para respeitar a liberação de acesso feita pelo admin.
@@ -232,6 +235,14 @@ function App() {
       .then(({ data }) => setTermosAceitos(!!data))
   }, [userId])
 
+  // Depois do login em /entrar, o app abre na raiz (DFC).
+  useEffect(() => {
+    if (user && pathname === ENTRAR_PATH) {
+      window.history.replaceState({}, '', DFC_PATH)
+      setPathname(DFC_PATH)
+    }
+  }, [user, pathname])
+
   useEffect(() => {
     const onPopState = () => setPathname(window.location.pathname)
     window.addEventListener('popstate', onPopState)
@@ -264,14 +275,14 @@ function App() {
         recoveryMode={isRecoveryFlow}
         onBack={() => {
           setIsRecoveryFlow(false)
-          window.history.replaceState({}, '', DFC_PATH)
-          setPathname(DFC_PATH)
+          window.history.replaceState({}, '', ENTRAR_PATH)
+          setPathname(ENTRAR_PATH)
         }}
         onRecoveryComplete={async () => {
           setIsRecoveryFlow(false)
           await supabase.auth.signOut()
-          window.history.replaceState({}, '', DFC_PATH)
-          setPathname(DFC_PATH)
+          window.history.replaceState({}, '', ENTRAR_PATH)
+          setPathname(ENTRAR_PATH)
         }}
       />
     </ErrorBoundary>
@@ -283,7 +294,15 @@ function App() {
 
   if (!user) {
     if (pathname === '/reset-password') return resetPassword
-    return <LoginPage onForgotPassword={() => navigate('/reset-password')} />
+    if (pathname === ENTRAR_PATH) {
+      return (
+        <LoginPage
+          onForgotPassword={() => navigate('/reset-password')}
+          onVoltar={() => navigate(DFC_PATH)}
+        />
+      )
+    }
+    return <LandingPage onEntrar={() => navigate(ENTRAR_PATH)} />
   }
 
   if (isInviteFlow) {
@@ -339,6 +358,7 @@ function App() {
           onVoltar={handleLogout}
           voltarLabel="Sair"
           onVerTermos={() => navigate(TERMOS_PATH)}
+          nomeUsuario={user.name}
         />
       </ErrorBoundary>
     )

@@ -1,0 +1,214 @@
+/* Landing do DFC Scale — identidade ClinicScale (Grafite + dourado, Sora + Hanken Grotesk).
+   Sempre escura, independente do tema do app. */
+.page {
+  --cs-grafite:   #16140f;
+  --cs-dourado:   #c2a063;
+  --cs-champagne: #e8d9b5;
+  --cs-marfim:    #f4efe3;
+  --cs-tinta:     #131109;
+
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(900px 420px at 50% -6%, #3a2f1b 0%, rgba(22, 20, 15, 0) 60%),
+    var(--cs-grafite);
+  color: var(--cs-marfim);
+  font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── Topo ── */
+.topo {
+  width: 100%;
+  max-width: 1088px;
+  margin: 0 auto;
+  padding: 28px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--cs-marfim);
+  text-decoration: none;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.marca strong { font-weight: 800; }
+
+.simbolo {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.btnTopo {
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--cs-marfim);
+  background: transparent;
+  border: 1px solid rgba(244, 239, 227, 0.26);
+  border-radius: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.btnTopo:hover {
+  border-color: rgba(244, 239, 227, 0.5);
+  background: rgba(244, 239, 227, 0.04);
+}
+
+/* ── Hero ── */
+.hero {
+  flex: 1;
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 96px 24px 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--cs-dourado);
+  margin-bottom: 24px;
+}
+
+.titulo {
+  font-family: 'Sora', 'Segoe UI', system-ui, sans-serif;
+  font-size: clamp(38px, 7vw, 68px);
+  font-weight: 800;
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+  color: var(--cs-champagne);
+  text-wrap: balance;
+}
+
+.texto {
+  max-width: 580px;
+  margin-top: 28px;
+  font-size: 17px;
+  line-height: 1.625;
+  color: rgba(244, 239, 227, 0.66);
+}
+
+.cta {
+  margin-top: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--cs-tinta);
+  background: var(--cs-marfim);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 28px;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.cta:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.cta svg { transition: transform 0.15s; }
+.cta:hover svg { transform: translateX(2px); }
+
+.cta:focus-visible,
+.btnTopo:focus-visible,
+.marca:focus-visible {
+  outline: 2px solid var(--cs-dourado);
+  outline-offset: 3px;
+}
+
+.nota {
+  margin-top: 16px;
+  font-size: 13px;
+  color: rgba(244, 239, 227, 0.5);
+}
+
+/* ── Destaques ── */
+.destaques {
+  list-style: none;
+  margin-top: 72px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 100%;
+  max-width: 760px;
+}
+
+.destaque {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 16px;
+}
+
+.destaque + .destaque {
+  border-left: 1px solid rgba(244, 239, 227, 0.12);
+}
+
+.destaqueValor {
+  font-family: 'Sora', 'Segoe UI', system-ui, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cs-champagne);
+}
+
+.destaqueLegenda {
+  font-size: 13.5px;
+  color: rgba(244, 239, 227, 0.55);
+}
+
+/* ── Rodapé ── */
+.rodape {
+  border-top: 1px solid rgba(244, 239, 227, 0.08);
+  padding: 28px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cs-dourado);
+}
+
+@media (max-width: 640px) {
+  .topo { padding: 20px 16px; }
+  .hero { padding: 56px 16px 48px; }
+  .texto { font-size: 16px; }
+  .destaques {
+    grid-template-columns: 1fr;
+    margin-top: 48px;
+    gap: 0;
+  }
+  .destaque { padding: 16px 0; }
+  .destaque + .destaque {
+    border-left: none;
+    border-top: 1px solid rgba(244, 239, 227, 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta, .cta svg, .btnTopo { transition: none; }
+  .cta:hover { transform: none; }
+}

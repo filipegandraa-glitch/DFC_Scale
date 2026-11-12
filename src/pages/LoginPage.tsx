@@ -5,9 +5,10 @@ import { useToastErrorState } from '../hooks/useToastErrorState'
 
 interface LoginPageProps {
   onForgotPassword: () => void
+  onVoltar?: () => void
 }
 
-export default function LoginPage({ onForgotPassword }: LoginPageProps) {
+export default function LoginPage({ onForgotPassword, onVoltar }: LoginPageProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -128,6 +129,12 @@ export default function LoginPage({ onForgotPassword }: LoginPageProps) {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+
+        {onVoltar && (
+          <button type="button" className={styles.voltarLink} onClick={onVoltar}>
+            ← Voltar ao início
+          </button>
+        )}
       </div>
     </div>
   )
