@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import styles from './AnaliseDrePage.module.css'
 import { supabase } from '../lib/supabase'
 import type { DreClassificacao, DreLancamento, Empresa, Database } from '../lib/types'
@@ -11,8 +11,22 @@ import { useSessionStorageState } from '../hooks/useSessionStorageState'
 import ModalTransition from '../components/ModalTransition'
 import { TourBoasVindas, useTourBoasVindas } from '../components/tour/TourBoasVindas'
 import { SeloFaixa } from '../components/referencias/SeloFaixa'
+import { ResumoResultado, type RecorteResumo } from '../components/referencias/ResumoResultado'
 import { useToastErrorState } from '../hooks/useToastErrorState'
 import { arredondar, classificarFaixa, resumoDasFaixas, LINHAS_REFERENCIA, useReferenciasDre } from '../lib/referenciasDre'
+import { criticaDoPeriodo, diagnosticoDoCaixa, periodoCurto } from '../lib/diagnosticoDfc'
+import {
+  LINHAS_DRE,
+  catalogoDoPlano,
+  contaDoLancamento,
+  grupoDaLinha,
+  linhaDoGrupo,
+  organizarLancamento,
+  planoDaEmpresa,
+  reconhecerConta,
+  tipoDaLinha,
+  useEstruturaDre,
+} from '../lib/estruturaDre'
 import { toast } from '../lib/toast'
 
 type DreGrupo = Database['public']['Tables']['dre_grupos']['Row']
@@ -325,9 +339,12 @@ interface AnaliseDreProps {
   onTrocarEmpresa: () => void
   /** Menu de perfil do canto superior direito (Referências do DRE e Sair). */
   menuPerfil?: ReactNode
+  /** Abre a tela Referências do DRE (consulta para todos, edição só para ADM). */
+  onAbrirReferencias?: () => void
+  podeEditarReferencias?: boolean
 }
 
-export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }: AnaliseDreProps) {
+export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, onAbrirReferencias, podeEditarReferencias = false }: AnaliseDreProps) {
   const storagePrefix = `dre:${empresa.id}`
   const [showWizard,     setShowWizard]     = useState(false)
   const [editingId,      setEditingId]      = useState<string | null>(null)
@@ -338,9 +355,9 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
   const [aiWarning,      setAiWarning]      = useState('')
   const [error,          setError]          = useToastErrorState()
   const [form,           setForm]           = useState<FormState>(INITIAL_FORM)
-  const [lancamentos,    setLancamentos]    = useState<DreLancamento[]>([])
-  const [classificacoes, setClassificacoes] = useState<(DreClassificacao & { grupo: { nome: string } | null })[]>([])
-  const [grupos,         setGrupos]         = useState<DreGrupo[]>([])
+  const [lancamentosBrutos, setLancamentosBrutos] = useState<DreLancamento[]>([])
+  const [classificacoesBanco, setClassificacoesBanco] = useState<(DreClassificacao & { grupo: { nome: string } | null })[]>([])
+  const [gruposBanco,    setGruposBanco]    = useState<DreGrupo[]>([])
   const [anoFiltro, setAnoFiltro] = useSessionStorageState(
     `${storagePrefix}:ano-filtro`,
     () => String(new Date().getFullYear()),
@@ -359,6 +376,48 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
   const [showAssistente,   setShowAssistente]   = useState(false)
   const tour = useTourBoasVindas()
   const { referencias, carregado: referenciasCarregadas } = useReferenciasDre()
+
+  // ── Estrutura do DRE (padronizada pelo ADM, por segmento) ──────────────────
+  // A conta do lançamento define a linha do DRE. Enquanto a estrutura não carrega
+  // (ou se a leitura falhar), segue o plano de contas antigo do banco.
+  const { estrutura, carregado: usaEstrutura } = useEstruturaDre()
+  const plano = useMemo(() => planoDaEmpresa(estrutura, empresa.id), [estrutura, empresa.id])
+  const lancamentos = useMemo(
+    () => (usaEstrutura ? lancamentosBrutos.map(l => organizarLancamento(l, plano)) : lancamentosBrutos),
+    [usaEstrutura, lancamentosBrutos, plano],
+  )
+  const classificacoes = useMemo<(DreClassificacao & { grupo: { nome: string } | null })[]>(
+    () => (usaEstrutura
+      ? plano.contasAtivas.map(conta => ({
+          id: `conta:${conta.nome}`,
+          nome: conta.nome,
+          tipo: tipoDaLinha(conta.linha),
+          ativo: true,
+          created_at: '',
+          grupo_id: null,
+          grupo: { nome: grupoDaLinha(conta.linha) },
+        }))
+      : classificacoesBanco),
+    [usaEstrutura, plano, classificacoesBanco],
+  )
+  const grupos = useMemo<DreGrupo[]>(
+    () => (usaEstrutura
+      ? LINHAS_DRE.map(l => ({ id: `linha:${l.id}`, nome: l.grupo, tipo: l.tipo, ativo: true, created_at: '', updated_at: '' }))
+      : gruposBanco),
+    [usaEstrutura, gruposBanco],
+  )
+  // Para a importação de extrato: contas e reconhecimento da estrutura (undefined = plano antigo).
+  const catalogoEstrutura = useMemo(() => (usaEstrutura ? catalogoDoPlano(plano) : undefined), [usaEstrutura, plano])
+  const reconhecerPelaEstrutura = useMemo(
+    () => (usaEstrutura
+      ? (descricao: string, tipo: 'receita' | 'despesa') => reconhecerConta(plano, descricao, tipo)?.nome ?? null
+      : undefined),
+    [usaEstrutura, plano],
+  )
+  const lancamentosForaDaEstrutura = useMemo(
+    () => (usaEstrutura ? lancamentosBrutos.filter(l => !contaDoLancamento(plano, l.classificacao)).length : 0),
+    [usaEstrutura, lancamentosBrutos, plano],
+  )
   const [showUpload,       setShowUpload]       = useState(false)
   const [showExportModal,  setShowExportModal]  = useState(false)
   const [exportando,       setExportando]       = useState(false)
@@ -385,13 +444,16 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
   const [editClassSaving,    setEditClassSaving]    = useState(false)
   const [editClassError,     setEditClassError]     = useToastErrorState()
   const [loading, setLoading] = useState(false)
+  // Até a 1ª leitura válida, a faixa não afirma nada sobre o caixa (nem se ela falhar).
+  const [lancamentosLidos, setLancamentosLidos] = useState(false)
+  const [leituraFalhou, setLeituraFalhou] = useState(false)
   const mesesListboxRef = useRef<HTMLDivElement | null>(null)
  const fetchLancamentos = async (targetUserId?: string, adminOverride?: boolean) => {
   setLoading(true)
   try {
   const { data: authData } = await supabase.auth.getUser()
   const myId = authData.user?.id
-  if (!myId) { setLancamentos([]); return }
+  if (!myId) { setLancamentosBrutos([]); setLancamentosLidos(true); return }
 
   // adminOverride is used on initial load to bypass stale isAdmin state (React batching)
   const effectiveAdmin = adminOverride ?? isAdmin
@@ -415,7 +477,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
     }
 
     const { data, error } = await query
-    if (error) { setError(error.message); return }
+    if (error) { setError(error.message); setLeituraFalhou(true); return }
 
     const chunk = (data ?? []) as DreLancamento[]
     all = all.concat(chunk)
@@ -425,7 +487,9 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
   }
 
   const unique = [...new Map(all.map(item => [item.id, item])).values()]
-  setLancamentos(unique)
+  setLancamentosBrutos(unique)
+  setLancamentosLidos(true)
+  setLeituraFalhou(false)
   } finally {
     setLoading(false)
   }
@@ -436,13 +500,13 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
       .from('dre_classificacoes')
       .select('*, grupo:dre_grupos!grupo_id(nome)')
       .neq('ativo', false).order('tipo').order('nome')
-    setClassificacoes((data ?? []) as (DreClassificacao & { grupo: { nome: string } | null })[])
+    setClassificacoesBanco((data ?? []) as (DreClassificacao & { grupo: { nome: string } | null })[])
   }
 
   const fetchGrupos = async () => {
     const { data } = await supabase
       .from('dre_grupos').select('*').eq('ativo', true).order('nome')
-    setGrupos(data ?? [])
+    setGruposBanco(data ?? [])
   }
 
   // Load data on mount + check admin
@@ -845,6 +909,68 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
     ? classificarFaixa(arredondar(kpis.margemContribPct, 1), referencias.margem_contribuicao, DEF_MARGEM.sentido)
     : null
 
+  // ── Resumo do resultado: período selecionado (ano + meses), sem filtro de tipo/busca ──
+  const grupoDaClassificacao = useCallback(
+    (classificacao: string) => classificacaoToGrupo[classificacao],
+    [classificacaoToGrupo],
+  )
+
+  const resumoResultado = useMemo(() => {
+    const doPeriodo = lancamentos.filter(item => {
+      const src = item.data_lancamento ?? item.created_at
+      if (anoFiltro !== 'todos' && (!src || src.slice(0, 4) !== anoFiltro)) return false
+      if (mesesFiltro.length > 0 && (!src || !mesesFiltro.includes(src.slice(5, 7)))) return false
+      return true
+    })
+    const recorte = (lista: DreLancamento[]): RecorteResumo => {
+      const k = calcularKpis(lista)
+      return { lancamentos: lista, recebimento: k.receitaOperacional, margemPct: k.margemContribPct, margemReais: k.margemContrib }
+    }
+    // Um recorte por AAAA-MM: com "Todos os anos" o mesmo mês de anos diferentes fica separado.
+    const porMes = new Map<string, DreLancamento[]>()
+    for (const l of doPeriodo) {
+      const src = l.data_lancamento ?? l.created_at
+      if (!src) continue
+      const chave = src.slice(0, 7)
+      const lista = porMes.get(chave)
+      if (lista) lista.push(l)
+      else porMes.set(chave, [l])
+    }
+    return {
+      periodo: recorte(doPeriodo),
+      meses: [...porMes.keys()].sort().map(chave => recorte(porMes.get(chave)!)),
+    }
+  }, [lancamentos, anoFiltro, mesesFiltro])
+
+  // ── Diagnóstico do caixa (título da faixa): o mesmo período do resumo, sem filtro de tipo/busca ──
+  const diagnostico = useMemo(() => {
+    if (!lancamentosLidos) {
+      return leituraFalhou
+        ? { titulo: 'Análise DFC', frase: 'Não foi possível ler os lançamentos agora. Recarregue a página para ver o diagnóstico.' }
+        : { titulo: 'Análise DFC', frase: 'Carregando os lançamentos do período…' }
+    }
+    const { periodo } = resumoResultado
+    let entradas = 0
+    let saidas = 0
+    for (const item of periodo.lancamentos) {
+      const tipo = item.tipo
+        ?? tipoMap[item.classificacao]
+        ?? (item.classificacao === 'receita' ? 'receita' : 'despesa')
+      if (tipo === 'receita') entradas += Number(item.valor)
+      else                   saidas += Number(item.valor)
+    }
+    const critica = referenciasCarregadas
+      ? criticaDoPeriodo({
+          lancamentos: periodo.lancamentos,
+          recebimento: periodo.recebimento,
+          margemPct: periodo.margemPct,
+          referencias,
+          grupoDaClassificacao,
+        })
+      : null
+    return diagnosticoDoCaixa({ entradas, saidas, periodoCurto: periodoCurto(anoFiltro, mesesFiltro), critica })
+  }, [lancamentosLidos, leituraFalhou, resumoResultado, tipoMap, referenciasCarregadas, referencias, grupoDaClassificacao, anoFiltro, mesesFiltro])
+
   const toggleGrupo = (key: string) => setExpandedGrupos(prev => {
     const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n
   })
@@ -936,8 +1062,13 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
     // O grupo escolhido manualmente no modal deve prevalecer sobre o grupo
     // sugerido pela classificação. Antes, qualquer alteração de grupo era
     // descartada aqui e o lançamento permanecia no grupo antigo.
-    const grupoNome         = editClassForm.grupo.trim()
+    const grupoNome         = usaEstrutura ? (classificacaoToGrupo[classificacaoNome] ?? '') : editClassForm.grupo.trim()
     const tipo              = editClassForm.tipo as 'receita' | 'despesa'
+    if (!grupoNome) {
+      setEditClassError('Escolha uma conta da estrutura do DRE.')
+      setEditClassSaving(false)
+      return
+    }
     const payload           = { tipo, classificacao: classificacaoNome, grupo: grupoNome }
 
     const { data: updated, error: errUpdate } = await supabase
@@ -995,7 +1126,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
       }, { onConflict: 'empresa_id,descricao_normalizada' })
     }
 
-    setLancamentos(prev => prev.map(item =>
+    setLancamentosBrutos(prev => prev.map(item =>
       idsAtualizados.has(item.id) ? { ...item, ...payload } : item,
     ))
 
@@ -1104,6 +1235,13 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
     const grupoNome = grupoNomeRaw.trim()
     if (!grupoNome) return { ok: false as const, error: 'Grupo vazio.' }
 
+    // Estrutura do DRE em vigor: só as linhas fixas valem e nada é criado no banco.
+    if (usaEstrutura) {
+      return LINHAS_DRE.some(l => l.grupo === grupoNome)
+        ? { ok: true as const }
+        : { ok: false as const, error: 'Essa linha não faz parte da estrutura do DRE.' }
+    }
+
     const tipoGrupo: 'receita' | 'despesa' = tipoRaw === 'receita' ? 'receita' : 'despesa'
 
     // Verifica se o grupo já existe com qualquer tipo — evita duplicatas (nome,tipo=receita) + (nome,tipo=despesa)
@@ -1165,7 +1303,17 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
         // Classificação do histórico não está mais no plano — ignora e cai na IA
       }
 
-      // Prioridade 2: IA
+      // Prioridade 2: palavras-chave da estrutura do DRE (sem custo de IA)
+      if (usaEstrutura && (form.tipo === 'receita' || form.tipo === 'despesa')) {
+        const conta = reconhecerConta(plano, form.descricao, form.tipo)
+        if (conta) {
+          setForm(p => ({ ...p, classificacaoNome: conta.nome, grupo: grupoDaLinha(conta.linha) }))
+          setAiWarning('Reconhecido pelas palavras-chave da estrutura do DRE.')
+          return
+        }
+      }
+
+      // Prioridade 3: IA
       const { data: configData } = await supabase
         .from('configuracoes').select('valor').eq('chave', 'modelo_openai').single()
       const modelo = configData?.valor ?? DEFAULT_AI_MODEL
@@ -1198,8 +1346,14 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
           gruposOficiais.includes(grupoIa) ? grupoIa :
           (classificacaoToGrupo[classificacaoIa] ?? '')
 
-        setForm(p => ({ ...p, classificacaoNome: classificacaoIa, grupo: grupoFinal }))
-        if (data?.aviso) setAiWarning(String(data.aviso))
+        // Com a estrutura em vigor, só vale conta da estrutura: fora dela, o usuário escolhe.
+        if (usaEstrutura && !classificacoes.some(c => c.nome === classificacaoIa)) {
+          setForm(p => ({ ...p, classificacaoNome: '', grupo: '' }))
+          setAiWarning('A IA não encontrou uma conta da estrutura do DRE para este lançamento. Escolha na lista.')
+        } else {
+          setForm(p => ({ ...p, classificacaoNome: classificacaoIa, grupo: grupoFinal }))
+          if (data?.aviso) setAiWarning(String(data.aviso))
+        }
       }
     } catch (e) {
       setAiError(`Erro inesperado: ${String(e)}`)
@@ -1220,8 +1374,14 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
     const classificacaoNome  = form.classificacaoNome.trim()
     // A classificação preenche uma sugestão inicial, mas no passo seguinte o
     // usuário pode escolher outro grupo. Persistir a escolha final do formulário.
-    const grupoNome          = form.grupo.trim()
+    const grupoNome          = usaEstrutura ? (classificacaoToGrupo[classificacaoNome] ?? '') : form.grupo.trim()
     const tipoClassificacao  = form.tipo || (tipoMap[classificacaoNome] === 'receita' ? 'receita' : 'despesa')
+
+    if (usaEstrutura && !grupoNome) {
+      setSaving(false)
+      setError('Escolha uma conta da estrutura do DRE.')
+      return
+    }
     const dataLancamento     = form.data || today()
 
     // Não upsert em dre_classificacoes — o plano de contas é gerenciado pelas
@@ -1442,228 +1602,109 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
 
   return (
     <div className={styles.page}>
-      <div className={styles.glow} aria-hidden />
-
-      <header className={styles.header}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-            <button onClick={onTrocarEmpresa} className={styles.btnTrocarEmpresa}>
-              Trocar empresa
-            </button>
-            <button onClick={tour.abrir} className={styles.btnTrocarEmpresa}>
-              Como usar
-            </button>
+      {/* ── Faixa escura: diagnóstico do caixa e números do período ── */}
+      <section className={`${styles.faixa} tema-grafite`} aria-labelledby="dfc-diagnostico">
+        <div className={styles.faixaGlow} aria-hidden />
+        <div className={styles.conteudo}>
+          <div className={styles.nav}>
+            <span className={styles.marca}>
+              <img src="/symbol-gold.svg" alt="" width={22} height={22} />
+              <span>DFC <b>Scale</b></span>
+            </span>
+            <div className={styles.navDir}>
+              <button type="button" onClick={onTrocarEmpresa} className={styles.navLink}>
+                Trocar empresa
+              </button>
+              <button type="button" onClick={tour.abrir} className={styles.navLink}>
+                Como usar
+              </button>
+              {menuPerfil}
+            </div>
           </div>
-          <h1>Análise DFC</h1>
-          <p className={styles.subtitle}>
-            <span style={{ color: '#c9a22a', fontWeight: 600 }}>{empresa.nome}</span>
-            {empresa.cnpj ? ` · ${empresa.cnpj}` : ''} — Acompanhe receitas, despesas e o resultado do período.
+
+          <p className={styles.eyebrow}>
+            Análise DFC · {empresa.nome}{empresa.cnpj ? ` · ${empresa.cnpj}` : ''}
+          </p>
+
+          <div className={styles.faixaGrid}>
+            <div className={styles.faixaTexto}>
+              <h1 id="dfc-diagnostico" className={styles.titulo}>{diagnostico.titulo}</h1>
+              <p className={styles.apoio}>{diagnostico.frase}</p>
+            </div>
+            <div className={styles.acoes}>
+              <button className={styles.btnUpload} onClick={() => setShowUpload(true)}>
+                <span className={styles.btnUploadInfo}>ⓘ</span>
+                <span className={styles.btnUploadTooltip}>Importe um extrato bancário (.xlsx, .xls ou .csv). A IA classifica automaticamente os lançamentos.</span>
+                <span className={styles.btnUploadEyebrow}>• IA • OPENAI</span>
+                <span className={styles.btnUploadTitle}>Importar Extrato</span>
+              </button>
+              <button className={styles.btnAssistente} onClick={() => setShowAssistente(true)}>
+                <span className={styles.btnAssistenteInfo}>ⓘ</span>
+                <span className={styles.btnAssistenteTooltip}>Abre o Assistente de DFC — uma IA treinada para analisar seus lançamentos e responder perguntas como "qual meu maior custo?", "como está minha margem?" ou "onde posso reduzir despesas?". Powered by OpenAI.</span>
+                <span className={styles.btnAssistenteEyebrow}>• IA • OPENAI</span>
+                <span className={styles.btnAssistenteTitle}>Assistente de DFC</span>
+              </button>
+              <button
+                className={styles.btnExport}
+                onClick={() => setShowExportModal(true)}
+                disabled={lancamentosFiltrados.length === 0}
+              >
+                <span className={styles.btnExportInfo}>ⓘ</span>
+                <span className={styles.btnExportTooltip}>Exporta a DFC do período filtrado (ano, meses, tipo e busca) em uma planilha .xlsx.</span>
+                <span className={styles.btnExportEyebrow}>• RELATÓRIO</span>
+                <span className={styles.btnExportTitle}>Exportar Relatório</span>
+              </button>
+              <button type="button" className={styles.btnNovoFaixa} onClick={openWizard}>
+                + Novo lançamento
+              </button>
+            </div>
+          </div>
+
+          {/* ── Stats ── */}
+          <div className={styles.statsGrid}>
+            <StatCard
+              title="Receitas"
+              value={moeda(totais.receitas)}
+              tone="positive"
+              hint="Soma de todas as entradas financeiras do período selecionado — receitas de serviços, repasses, convênios e qualquer lançamento classificado como receita."
+            >
+              <MiniColunas serie={serieMensal} campo="receitas" />
+            </StatCard>
+            <StatCard
+              title="Despesas"
+              value={moeda(totais.despesas)}
+              tone="negative"
+              hint="Soma de todas as saídas financeiras do período — custos operacionais, folha, aluguel, insumos, impostos e qualquer lançamento classificado como despesa."
+            >
+              <MiniColunas serie={serieMensal} campo="despesas" />
+            </StatCard>
+            <StatCard
+              title="Resultado"
+              value={moeda(resultado)}
+              tone={resultado >= 0 ? 'positive' : 'negative'}
+              hint={resultado >= 0
+                ? 'Receitas superam as despesas — a empresa está no lucro neste período. Resultado = Receitas − Despesas.'
+                : 'Despesas superam as receitas — a empresa está no prejuízo neste período. Resultado = Receitas − Despesas.'
+              }
+            >
+              <MiniColunas serie={serieMensal} campo="resultado" />
+            </StatCard>
+          </div>
+
+          <p className={styles.lema}>
+            <img src="/symbol-gold.svg" alt="" width={16} height={16} />
+            Todo resultado começa pelo caixa.
           </p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
-          <button className={styles.btnAssistente} onClick={() => setShowAssistente(true)}>
-            <span className={styles.btnAssistenteInfo}>ⓘ</span>
-            <span className={styles.btnAssistenteTooltip}>Abre o Assistente de DFC — uma IA treinada para analisar seus lançamentos e responder perguntas como "qual meu maior custo?", "como está minha margem?" ou "onde posso reduzir despesas?". Powered by OpenAI.</span>
-            <span className={styles.btnAssistenteEyebrow}>• IA • OPENAI</span>
-            <span className={styles.btnAssistenteTitle}>Assistente de DFC</span>
-          </button>
-          <button className={styles.btnUpload} onClick={() => setShowUpload(true)}>
-            <span className={styles.btnUploadInfo}>ⓘ</span>
-            <span className={styles.btnUploadTooltip}>Importe um extrato bancário (.xlsx, .xls ou .csv). A IA classifica automaticamente os lançamentos.</span>
-            <span className={styles.btnUploadEyebrow}>• IA • OPENAI</span>
-            <span className={styles.btnUploadTitle}>Importar Extrato</span>
-          </button>
-          <button
-            className={styles.btnExport}
-            onClick={() => setShowExportModal(true)}
-            disabled={lancamentosFiltrados.length === 0}
-          >
-            <span className={styles.btnExportInfo}>ⓘ</span>
-            <span className={styles.btnExportTooltip}>Exporta a DFC do período filtrado (ano, meses, tipo e busca) em uma planilha .xlsx.</span>
-            <span className={styles.btnExportEyebrow}>• RELATÓRIO</span>
-            <span className={styles.btnExportTitle}>Exportar Relatório</span>
-          </button>
-          {menuPerfil}
-        </div>
-      </header>
-
-      {/* ── Stats ── */}
-      <section className={styles.statsGrid}>
-        <StatCard
-          title="Receitas"
-          value={moeda(totais.receitas)}
-          tone="positive"
-          hint="Soma de todas as entradas financeiras do período selecionado — receitas de serviços, repasses, convênios e qualquer lançamento classificado como receita."
-        >
-          <MiniColunas serie={serieMensal} campo="receitas" />
-        </StatCard>
-        <StatCard
-          title="Despesas"
-          value={moeda(totais.despesas)}
-          tone="negative"
-          hint="Soma de todas as saídas financeiras do período — custos operacionais, folha, aluguel, insumos, impostos e qualquer lançamento classificado como despesa."
-        >
-          <MiniColunas serie={serieMensal} campo="despesas" />
-        </StatCard>
-        <StatCard
-          title="Resultado"
-          value={moeda(resultado)}
-          tone={resultado >= 0 ? 'positive' : 'negative'}
-          hint={resultado >= 0
-            ? 'Receitas superam as despesas — a empresa está no lucro neste período. Resultado = Receitas − Despesas.'
-            : 'Despesas superam as receitas — a empresa está no prejuízo neste período. Resultado = Receitas − Despesas.'
-          }
-        >
-          <MiniColunas serie={serieMensal} campo="resultado" />
-        </StatCard>
       </section>
 
-      <GraficosDfc {...dadosRoscas} />
+      {/* ── Corpo marfim: filtros, indicadores, gráficos, resumo, tabela e modais ── */}
+      <div className={`${styles.corpo} tema-marfim`}>
+        <div className={styles.conteudo}>
 
-      {/* ── KPI Cards ── */}
-      {lancamentosFiltrados.length > 0 && (
-        <section className={styles.kpiSection}>
-          <h3 className={styles.kpiSectionTitle}>Indicadores DFC</h3>
-          <div className={styles.kpiGrid}>
-            <KpiCard
-              title="Receitas Operacionais"
-              value={moeda(kpis.receitaOperacional)}
-              secondaryValue={`Líq. ${moeda(kpis.receitaLiquida)}`}
-              hint="Receita bruta do período. Líquida = após deduções e impostos sobre faturamento (Simples/Presumido)."
-              tone="positive"
-            />
-            <KpiCard
-              title="Margem de Contribuição"
-              value={pct(arredondar(kpis.margemContribPct, 1))}
-              secondaryValue={moeda(kpis.margemContrib)}
-              hint="Receita Líquida menos custos diretos de entrega (materiais, insumos, serviços operacionais)."
-              tone={faixaMargem
-                ? (faixaMargem === 'atencao' ? 'negative' : faixaMargem === 'media' ? 'neutral' : 'positive')
-                : kpiTone(kpis.margemContribPct)}
-              selo={faixaMargem && (
-                <SeloFaixa
-                  faixa={faixaMargem}
-                  dica={`Referência do método: ${resumoDasFaixas(DEF_MARGEM, referencias.margem_contribuicao)}`}
-                />
-              )}
-            />
-            <KpiCard
-              title="EBITDA"
-              value={pct(kpis.ebitdaPct)}
-              secondaryValue={moeda(kpis.ebitda)}
-              hint="Margem de Contribuição menos despesas com pessoal, administrativas, comerciais e TI."
-              tone={kpiTone(kpis.ebitdaPct)}
-            />
-            <KpiCard
-              title="EBIT"
-              value={pct(kpis.ebitPct)}
-              secondaryValue={moeda(kpis.ebit)}
-              hint="EBITDA + receitas financeiras − despesas financeiras (D&A, juros, bancárias)."
-              tone={kpiTone(kpis.ebitPct)}
-            />
-            <KpiCard
-              title="NOPAT (Resultado Op.)"
-              value={pct(kpis.nopatPct)}
-              secondaryValue={moeda(kpis.nopat)}
-              hint="EBIT menos investimentos em ativos — resultado operacional final do período."
-              tone={kpiTone(kpis.nopatPct)}
-            />
-          </div>
-          <p className={styles.kpiDisclaimer}>
-            * Indicadores calculados com base nos lançamentos cadastrados e seus grupos. Quanto mais detalhado seu lançamento, mais preciso o cálculo.
-          </p>
-        </section>
-      )}
-
-      {/* ── Referências do DRE (faixas definidas pelo ADM) ── */}
-      {/* ── Modal Exportar Relatório ── */}
-      <ModalTransition open={showExportModal}>
-        {showExportModal && (
-          <div
-            className={styles.modalOverlay}
-            onPointerDown={exportBackdropDismiss.handleBackdropPointerDown}
-            onClick={exportBackdropDismiss.handleBackdropClick}
-          >
-            <div className={styles.modal} onClick={e => e.stopPropagation()}>
-              <div className={styles.modalHeader}>
-                <h2>Exportar Relatório</h2>
-                <button className={styles.closeBtn} onClick={() => setShowExportModal(false)}>✕</button>
-              </div>
-
-              <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 18 }}>
-                Escolha o formato do relatório em .xlsx do período filtrado ({periodoLabelExport}).
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <button className={styles.exportOptionBtn} onClick={exportarRelatorioAnalitico} disabled={exportando}>
-                  <span className={styles.exportOptionTitle}>{exportando ? 'Gerando planilha…' : 'Relatório Analítico'}</span>
-                  <span className={styles.exportOptionDesc}>Uma aba por mês, com todos os lançamentos individuais (data, descrição, classificação, grupo e valor).</span>
-                </button>
-                <button className={styles.exportOptionBtn} onClick={exportarRelatorioCompleto} disabled={exportando}>
-                  <span className={styles.exportOptionTitle}>{exportando ? 'Gerando planilha…' : 'Relatório Completo'}</span>
-                  <span className={styles.exportOptionDesc}>Visão consolidada da DFC — categorias por linha e meses por coluna, no layout oficial do modelo.</span>
-                </button>
-              </div>
-
-              <div className={styles.deletePeriodoBtns}>
-                <button className={styles.cancelBtn} onClick={() => setShowExportModal(false)}>Cancelar</button>
-              </div>
-            </div>
-          </div>
-        )}
-      </ModalTransition>
-
-      {/* ── Tour de boas-vindas (primeiro acesso) ── */}
-      <TourBoasVindas
-        aberto={tour.aberto}
-        onConcluir={tour.concluir}
-        onAdiar={tour.adiar}
-        onImportar={() => setShowUpload(true)}
-        onNovoLancamento={openWizard}
-      />
-
-      {/* ── Modal Upload Extrato ── */}
-      <ModalTransition open={showUpload}>
-        {showUpload && (
-          <div
-            className={styles.uploadOverlay}
-            onPointerDown={uploadBackdropDismiss.handleBackdropPointerDown}
-            onClick={uploadBackdropDismiss.handleBackdropClick}
-          >
-            <div className={styles.uploadModal} onClick={e => e.stopPropagation()}>
-              <ExtratoUpload key={empresa.id} empresaId={empresa.id} onSaved={() => fetchLancamentos()} onClose={() => setShowUpload(false)} />
-            </div>
-          </div>
-        )}
-      </ModalTransition>
-
-      {/* ── Modal Assistente IA ── */}
-      <ModalTransition open={showAssistente}>
-        {showAssistente && (
-          <div
-            className={styles.assistenteOverlay}
-            onPointerDown={assistenteBackdropDismiss.handleBackdropPointerDown}
-            onClick={assistenteBackdropDismiss.handleBackdropClick}
-          >
-          <div
-            className={styles.assistenteModal}
-            onClick={e => e.stopPropagation()}
-          >
-            <DreAssistentePanel lancamentos={lancamentosFiltrados} onClose={() => setShowAssistente(false)} />
-          </div>
-          </div>
-        )}
-      </ModalTransition>
-
-      {/* ── Lançamentos ── */}
-      <section className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <div>
-            <h2>Lançamentos</h2>
-            <span className={styles.stepIndicator}>{lancamentosFiltrados.length} registros</span>
-          </div>
-          <div className={styles.filtersRow}>
-            <label className={styles.filterLabel}>
+          {/* ── Filtros (alimentam números, indicadores, gráficos e tabela) ── */}
+          <div className={styles.filtrosBarra} role="search" aria-label="Filtros do período">
+            <label className={`${styles.filterLabel} ${styles.filtroBusca}`}>
               Buscar Lançamento
               <input
                 type="text"
@@ -1688,7 +1729,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
 
             <div className={styles.filterLabel}>
               <span>Meses</span>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+              <div className={styles.mesesLinha}>
                 <div className={styles.listboxWrap} ref={mesesListboxRef}>
                   <button
                     type="button"
@@ -1761,657 +1802,857 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }:
                 <option value="despesa">Despesas</option>
               </select>
             </label>
-
-            {canExcluirPeriodo && (
-              <button
-                className={styles.deletePeriodoBtn}
-                onClick={abrirExcluirPeriodo}
-                disabled={anoFiltro === 'todos'}
-                title={anoFiltro === 'todos'
-                  ? 'Selecione um ano no filtro para excluir um período'
-                  : 'Excluir todos os lançamentos do período selecionado'}
-              >
-                🗑 Excluir período
-              </button>
-            )}
-
-            <button className={styles.newBtn} onClick={openWizard}>+ Novo lançamento</button>
           </div>
-        </div>
 
-        {/* ── Accordion de grupos ── */}
-        {loading ? (
-          <div className={styles.skeletonList}>
-            {[...Array(7)].map((_, i) => (
-              <div key={i} className={styles.skeletonRow}>
-                <div className={styles.skeletonInner}>
-                  <div className={styles.skeletonBadge} />
-                  <div className={`${styles.skeletonLine} ${styles.skeletonLineWide}`} />
-                  <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : lancamentosAgrupados.length === 0 ? (
-          <div className={styles.emptyAccordion}>
-            Nenhum lançamento encontrado.{' '}
-            <button className={styles.emptyAction} onClick={openWizard}>Adicionar agora</button>
-          </div>
-        ) : (
-          <div className={dreGridStyle ? styles.dreScroll : undefined}>
-          <div className={`${styles.accordionList} ${dreGridStyle ? styles.accordionMeses : ''}`} style={dreGridStyle}>
-            {dreGridStyle && (
-              <div className={styles.dreHeaderRow}>
-                <span className={styles.dreHeaderLabel}>Conta · valores em R$</span>
-                {dreComparativoPorMes.map(m => (
-                  <span key={m.mes} className={styles.dreHeaderCell}>{m.label}</span>
-                ))}
-                {dreComparativoPorMes.length > 1 && (
-                  <span className={`${styles.dreHeaderCell} ${styles.mesColTotal}`}>Total</span>
-                )}
-                <span />
-              </div>
-            )}
-            {dreOrdenadoItems.map((item) => {
-              if (item.kind === 'totalizador') {
-                const tot = item as { kind: 'totalizador'; label: string; valor: number; pct?: number }
-                const tone = tot.valor > 0 ? 'positive' : tot.valor < 0 ? 'negative' : 'neutral'
-                return (
-                  <div
-                    key={`tot-${tot.label}`}
-                    className={`${styles.totalizadorRow} ${tone === 'positive' ? styles.totalizadorPositive : tone === 'negative' ? styles.totalizadorNegative : ''}`}
-                  >
-                    <span className={styles.totalizadorLabel}>{tot.label}</span>
-                    <div className={styles.totalizadorValues}>
-                      {dreComparativoPorMes.length > 0 ? (
-                        <>
-                          {dreComparativoPorMes.map(m => {
-                            const val = getMesTotalizadorValor(tot.label, m)
-                            const base = m.kpis.receitaOperacional > 0 ? m.kpis.receitaOperacional : 1
-                            return (
-                              <div key={m.mes} className={styles.mesColCell}>
-                                <span className={styles.mesColLabel}>{m.label}</span>
-                                <strong className={styles.totalizadorValor} title={moeda(val)}>{valorTabela(val)}</strong>
-                                <span className={styles.totalizadorPct}>{tot.pct !== undefined ? `${((val / base) * 100).toFixed(1)}%` : ''}</span>
-                              </div>
-                            )
-                          })}
-                          {dreComparativoPorMes.length > 1 && (
-                            <div className={`${styles.mesColCell} ${styles.mesColTotal}`}>
-                              <span className={styles.mesColLabel}>Total</span>
-                              <strong className={styles.totalizadorValor} title={moeda(tot.valor)}>{valorTabela(tot.valor)}</strong>
-                              <span className={styles.totalizadorPct}>{tot.pct !== undefined ? `${tot.pct.toFixed(1)}%` : ''}</span>
-                            </div>
-                          )}
-                          <span />
-                        </>
-                      ) : (
-                        <>
-                          {tot.pct !== undefined && <span className={styles.totalizadorPct}>{tot.pct.toFixed(1)}%</span>}
-                          <strong className={styles.totalizadorValor}>{moeda(tot.valor)}</strong>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )
-              }
-              const grupo = item.data
-              const gKey = grupo.nome
-              const gAberto = expandedGrupos.has(gKey)
-              return (
-                <div key={gKey} className={`${styles.grupoBlock} ${grupo.tipo === 'receita' ? styles.grupoBlockReceita : styles.grupoBlockDespesa}`}>
-                  <button className={styles.grupoBlockHeader} onClick={() => toggleGrupo(gKey)}>
-                    <div className={styles.grupoBlockLeft}>
-                      <span className={`${styles.grupoBadge} ${grupo.tipo === 'receita' ? styles.grupoBadgeReceita : styles.grupoBadgeDespesa}`}>
-                        {grupo.tipo === 'receita' ? '↑' : '↓'}
-                      </span>
-                      <strong className={styles.grupoBlockNome}>{grupo.nome}</strong>
-                      <span className={styles.grupoBlockCount}>
-                        {grupo.classificacoes.reduce((s, c) => s + c.items.length, 0)} lançamentos
-                      </span>
-                    </div>
-                    <div className={styles.grupoBlockRight}>
-                      {dreComparativoPorMes.length > 0 ? (
-                        <div className={styles.mesColValues}>
-                          {dreComparativoPorMes.map(m => {
-                            const gVal = getMesGrupoTotal(grupo.nome, m)
-                            const gBase = m.kpis.receitaOperacional > 0 ? m.kpis.receitaOperacional : null
-                            return (
-                              <div key={m.mes} className={styles.mesColCell}>
-                                <span className={styles.mesColLabel}>{m.label}</span>
-                                <strong className={grupo.tipo === 'receita' ? styles.valorPositivo : styles.valorNegativo} title={moeda(gVal)}>
-                                  {valorTabela(gVal)}
-                                </strong>
-                                <span className={styles.totalizadorPct}>{gBase ? ((gVal / gBase) * 100).toFixed(1) + '%' : '—'}</span>
-                              </div>
-                            )
-                          })}
-                          {dreComparativoPorMes.length > 1 && (
-                            <div className={`${styles.mesColCell} ${styles.mesColTotal}`}>
-                              <span className={styles.mesColLabel}>Total</span>
-                              <strong className={grupo.tipo === 'receita' ? styles.valorPositivo : styles.valorNegativo} title={moeda(grupo.total)}>
-                                {valorTabela(grupo.total)}
-                              </strong>
-                              <span className={styles.totalizadorPct}>{kpis.receitaOperacional > 0 ? ((grupo.total / kpis.receitaOperacional) * 100).toFixed(1) + '%' : '—'}</span>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <strong className={grupo.tipo === 'receita' ? styles.valorPositivo : styles.valorNegativo}>
-                            {moeda(grupo.total)}
-                          </strong>
-                          <span className={styles.totalizadorPct}>{kpis.receitaOperacional > 0 ? ((grupo.total / kpis.receitaOperacional) * 100).toFixed(1) + '%' : '—'}</span>
-                        </>
-                      )}
-                      <span className={styles.chevronIcon}>{gAberto ? '▲' : '▼'}</span>
-                    </div>
-                  </button>
-
-                  {gAberto && (
-                    <div className={styles.clfList}>
-                      {grupo.classificacoes.map(clf => {
-                        const cKey = `${gKey}::${clf.nome}`
-                        const cAberto = expandedClfs.has(cKey)
-                        return (
-                          <div key={cKey} className={styles.clfBlock}>
-                            <button className={styles.clfBlockHeader} onClick={() => toggleClf(cKey)}>
-                              <span className={styles.clfLeft}>
-                                <span className={styles.clfNome}>{clf.nome}</span>
-                                <span className={styles.clfCount}>{clf.items.length} lançamento(s)</span>
-                              </span>
-                              <div className={styles.clfRight}>
-                                {dreComparativoPorMes.length > 0 ? (
-                                  <div className={styles.mesColValues}>
-                                    {dreComparativoPorMes.map(m => {
-                                      const cVal = getMesClfTotal(grupo.nome, clf.nome, m)
-                                      const cBase = m.kpis.receitaOperacional > 0 ? m.kpis.receitaOperacional : null
-                                      return (
-                                        <div key={m.mes} className={styles.mesColCell}>
-                                          <span className={styles.mesColLabel}>{m.label}</span>
-                                          <strong className={styles.clfTotal} title={moeda(cVal)}>{valorTabela(cVal)}</strong>
-                                          <span className={styles.totalizadorPct}>{cBase ? ((cVal / cBase) * 100).toFixed(1) + '%' : '—'}</span>
-                                        </div>
-                                      )
-                                    })}
-                                    {dreComparativoPorMes.length > 1 && (
-                                      <div className={`${styles.mesColCell} ${styles.mesColTotal}`}>
-                                        <span className={styles.mesColLabel}>Total</span>
-                                        <strong className={styles.clfTotal} title={moeda(clf.total)}>{valorTabela(clf.total)}</strong>
-                                        <span className={styles.totalizadorPct}>{kpis.receitaOperacional > 0 ? ((clf.total / kpis.receitaOperacional) * 100).toFixed(1) + '%' : '—'}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <>
-                                    <strong className={styles.clfTotal}>{moeda(clf.total)}</strong>
-                                    <span className={styles.totalizadorPct}>{kpis.receitaOperacional > 0 ? ((clf.total / kpis.receitaOperacional) * 100).toFixed(1) + '%' : '—'}</span>
-                                  </>
-                                )}
-                                <span className={styles.chevronSm}>{cAberto ? '▲' : '▼'}</span>
-                              </div>
-                            </button>
-                            {cAberto && (
-                              <table className={styles.lancTable}>
-                                <thead>
-                                  <tr><th>Data</th><th>Descrição</th><th>Valor</th><th className={styles.thPct}>% Rec. Op.</th><th></th></tr>
-                                </thead>
-                                <tbody>
-                                  {clf.items.map(item => (
-                                    <tr key={item.id}>
-                                      <td>{formatDate(item)}</td>
-                                      <td>{item.descricao ?? '—'}</td>
-                                      <td className={item.tipo === 'receita' ? styles.tdReceita : styles.tdDespesa}>
-                                        {moeda(Number(item.valor))}
-                                      </td>
-                                      <td className={styles.tdPct}>
-                                        {kpis.receitaOperacional > 0
-                                          ? pct((Number(item.valor) / kpis.receitaOperacional) * 100)
-                                          : '—'}
-                                      </td>
-                                      <td className={styles.actionCell}>
-                                        <button className={styles.editClassBtn} onClick={() => openEditClassModal(item)}>
-                                          Editar Classificação
-                                        </button>
-                                        <button className={styles.editBtn} onClick={() => openEditWizard(item)}>
-                                          Editar
-                                        </button>
-                                        <button className={styles.deleteBtn} onClick={() => deleteLancamento(item)}>
-                                          Excluir
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
+          {/* ── KPI Cards ── */}
+          {lancamentosFiltrados.length > 0 && (
+            <section className={styles.kpiSection}>
+              <h2 className={styles.kpiSectionTitle}>Indicadores DFC</h2>
+              <div className={styles.kpiGrid}>
+                <KpiCard
+                  title="Receitas Operacionais"
+                  value={moeda(kpis.receitaOperacional)}
+                  secondaryValue={`Líq. ${moeda(kpis.receitaLiquida)}`}
+                  hint="Receita bruta do período. Líquida = após deduções e impostos sobre faturamento (Simples/Presumido)."
+                  tone="positive"
+                />
+                <KpiCard
+                  title="Margem de Contribuição"
+                  value={pct(arredondar(kpis.margemContribPct, 1))}
+                  secondaryValue={moeda(kpis.margemContrib)}
+                  hint="Receita Líquida menos custos diretos de entrega (materiais, insumos, serviços operacionais)."
+                  tone={faixaMargem
+                    ? (faixaMargem === 'atencao' ? 'negative' : faixaMargem === 'media' ? 'neutral' : 'positive')
+                    : kpiTone(kpis.margemContribPct)}
+                  selo={faixaMargem && (
+                    <SeloFaixa
+                      faixa={faixaMargem}
+                      dica={`Referência do método: ${resumoDasFaixas(DEF_MARGEM, referencias.margem_contribuicao)}`}
+                    />
                   )}
+                />
+                <KpiCard
+                  title="EBITDA"
+                  value={pct(kpis.ebitdaPct)}
+                  secondaryValue={moeda(kpis.ebitda)}
+                  hint="Margem de Contribuição menos despesas com pessoal, administrativas, comerciais e TI."
+                  tone={kpiTone(kpis.ebitdaPct)}
+                />
+                <KpiCard
+                  title="EBIT"
+                  value={pct(kpis.ebitPct)}
+                  secondaryValue={moeda(kpis.ebit)}
+                  hint="EBITDA + receitas financeiras − despesas financeiras (D&A, juros, bancárias)."
+                  tone={kpiTone(kpis.ebitPct)}
+                />
+                <KpiCard
+                  title="NOPAT (Resultado Op.)"
+                  value={pct(kpis.nopatPct)}
+                  secondaryValue={moeda(kpis.nopat)}
+                  hint="EBIT menos investimentos em ativos — resultado operacional final do período."
+                  tone={kpiTone(kpis.nopatPct)}
+                />
+              </div>
+              <p className={styles.kpiDisclaimer}>
+                * Indicadores calculados com base nos lançamentos cadastrados e seus grupos. Quanto mais detalhado seu lançamento, mais preciso o cálculo.
+              </p>
+            </section>
+          )}
+
+          <h2 className={styles.secaoTitulo}>Entradas e saídas</h2>
+          <GraficosDfc {...dadosRoscas} />
+
+          {/* ── Resumo do resultado (status pelas Referências do DRE) ── */}
+          {referenciasCarregadas && resumoResultado.periodo.lancamentos.length > 0 && (
+            <ResumoResultado
+              periodo={resumoResultado.periodo}
+              meses={resumoResultado.meses}
+              referencias={referencias}
+              grupoDaClassificacao={grupoDaClassificacao}
+              onAbrirReferencias={onAbrirReferencias}
+              podeEditar={podeEditarReferencias}
+            />
+          )}
+
+
+          {/* ── Modal Exportar Relatório ── */}
+          <ModalTransition open={showExportModal}>
+            {showExportModal && (
+              <div
+                className={styles.modalOverlay}
+                onPointerDown={exportBackdropDismiss.handleBackdropPointerDown}
+                onClick={exportBackdropDismiss.handleBackdropClick}
+              >
+                <div className={styles.modal} onClick={e => e.stopPropagation()}>
+                  <div className={styles.modalHeader}>
+                    <h2>Exportar Relatório</h2>
+                    <button className={styles.closeBtn} onClick={() => setShowExportModal(false)}>✕</button>
+                  </div>
+
+                  <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 18 }}>
+                    Escolha o formato do relatório em .xlsx do período filtrado ({periodoLabelExport}).
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <button className={styles.exportOptionBtn} onClick={exportarRelatorioAnalitico} disabled={exportando}>
+                      <span className={styles.exportOptionTitle}>{exportando ? 'Gerando planilha…' : 'Relatório Analítico'}</span>
+                      <span className={styles.exportOptionDesc}>Uma aba por mês, com todos os lançamentos individuais (data, descrição, classificação, grupo e valor).</span>
+                    </button>
+                    <button className={styles.exportOptionBtn} onClick={exportarRelatorioCompleto} disabled={exportando}>
+                      <span className={styles.exportOptionTitle}>{exportando ? 'Gerando planilha…' : 'Relatório Completo'}</span>
+                      <span className={styles.exportOptionDesc}>Visão consolidada da DFC — categorias por linha e meses por coluna, no layout oficial do modelo.</span>
+                    </button>
+                  </div>
+
+                  <div className={styles.deletePeriodoBtns}>
+                    <button className={styles.cancelBtn} onClick={() => setShowExportModal(false)}>Cancelar</button>
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-          </div>
-        )}
-      </section>
+              </div>
+            )}
+          </ModalTransition>
 
-      {/* ── Wizard modal ── */}
-      <ModalTransition open={showWizard}>
-        {showWizard && (
-        <div
-          className={styles.modalOverlay}
-          onPointerDown={wizardBackdropDismiss.handleBackdropPointerDown}
-          onClick={wizardBackdropDismiss.handleBackdropClick}
-        >
-          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+          {/* ── Tour de boas-vindas (primeiro acesso) ── */}
+          <TourBoasVindas
+            aberto={tour.aberto}
+            onConcluir={tour.concluir}
+            onAdiar={tour.adiar}
+            onImportar={() => setShowUpload(true)}
+            onNovoLancamento={openWizard}
+          />
 
-            <div className={styles.modalHeader}>
-              <h2>{editingId ? 'Editar lançamento' : 'Novo lançamento'}</h2>
-              <button className={styles.closeBtn} onClick={closeWizard} aria-label="Fechar">✕</button>
+          {/* ── Modal Upload Extrato ── */}
+          <ModalTransition open={showUpload}>
+            {showUpload && (
+              <div
+                className={`${styles.uploadOverlay} ${styles.temaOriginal}`}
+                onPointerDown={uploadBackdropDismiss.handleBackdropPointerDown}
+                onClick={uploadBackdropDismiss.handleBackdropClick}
+              >
+                <div className={styles.uploadModal} onClick={e => e.stopPropagation()}>
+                  <ExtratoUpload
+                    key={empresa.id}
+                    empresaId={empresa.id}
+                    onSaved={() => fetchLancamentos()}
+                    onClose={() => setShowUpload(false)}
+                    catalogo={catalogoEstrutura}
+                    reconhecer={reconhecerPelaEstrutura}
+                  />
+                </div>
+              </div>
+            )}
+          </ModalTransition>
+
+          {/* ── Modal Assistente IA ── */}
+          <ModalTransition open={showAssistente}>
+            {showAssistente && (
+              <div
+                className={`${styles.assistenteOverlay} ${styles.temaOriginal}`}
+                onPointerDown={assistenteBackdropDismiss.handleBackdropPointerDown}
+                onClick={assistenteBackdropDismiss.handleBackdropClick}
+              >
+              <div
+                className={styles.assistenteModal}
+                onClick={e => e.stopPropagation()}
+              >
+                <DreAssistentePanel lancamentos={lancamentosFiltrados} onClose={() => setShowAssistente(false)} />
+              </div>
+              </div>
+            )}
+          </ModalTransition>
+
+          {/* ── Lançamentos ── */}
+          <section className={styles.panel}>
+            <div className={styles.panelHeader}>
+              <div>
+                <p className={styles.panelEyebrow}>DRE do período</p>
+                <h2>Lançamentos</h2>
+                <span className={styles.stepIndicator}>{lancamentosFiltrados.length} registros</span>
+              </div>
+              <div className={styles.panelAcoes}>
+                {canExcluirPeriodo && (
+                  <button
+                    className={styles.deletePeriodoBtn}
+                    onClick={abrirExcluirPeriodo}
+                    disabled={anoFiltro === 'todos'}
+                    title={anoFiltro === 'todos'
+                      ? 'Selecione um ano no filtro para excluir um período'
+                      : 'Excluir todos os lançamentos do período selecionado'}
+                  >
+                    🗑 Excluir período
+                  </button>
+                )}
+
+                <button className={styles.newBtn} onClick={openWizard}>+ Novo lançamento</button>
+              </div>
             </div>
 
-            <StepProgress current={step} />
+            {lancamentosForaDaEstrutura > 0 && !loading && (
+              <p className={styles.avisoEstrutura} role="note">
+                {lancamentosForaDaEstrutura === 1
+                  ? '1 lançamento está com uma classificação que não existe na estrutura do DRE desta empresa.'
+                  : `${lancamentosForaDaEstrutura} lançamentos estão com uma classificação que não existe na estrutura do DRE desta empresa.`}
+                {' '}Eles aparecem pelo grupo gravado. Edite a classificação para organizá-los.
+              </p>
+            )}
 
-            {/* ── STEP 1: Tipo ── */}
-            {step === 1 && (
-              <div className={styles.wizardStep}>
-                <label className={styles.wizardLabel}>O que foi isso?</label>
+            {/* ── Accordion de grupos ── */}
+            {loading ? (
+              <div className={styles.skeletonList}>
+                {[...Array(7)].map((_, i) => (
+                  <div key={i} className={styles.skeletonRow}>
+                    <div className={styles.skeletonInner}>
+                      <div className={styles.skeletonBadge} />
+                      <div className={`${styles.skeletonLine} ${styles.skeletonLineWide}`} />
+                      <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : lancamentosAgrupados.length === 0 ? (
+              <div className={styles.emptyAccordion}>
+                Nenhum lançamento encontrado.{' '}
+                <button className={styles.emptyAction} onClick={openWizard}>Adicionar agora</button>
+              </div>
+            ) : (
+              <div className={dreGridStyle ? styles.dreScroll : undefined}>
+              <div className={`${styles.accordionList} ${dreGridStyle ? styles.accordionMeses : ''}`} style={dreGridStyle}>
+                {dreGridStyle && (
+                  <div className={styles.dreHeaderRow}>
+                    <span className={styles.dreHeaderLabel}>Conta · valores em R$</span>
+                    {dreComparativoPorMes.map(m => (
+                      <span key={m.mes} className={styles.dreHeaderCell}>{m.label}</span>
+                    ))}
+                    {dreComparativoPorMes.length > 1 && (
+                      <span className={`${styles.dreHeaderCell} ${styles.mesColTotal}`}>Total</span>
+                    )}
+                    <span />
+                  </div>
+                )}
+                {dreOrdenadoItems.map((item) => {
+                  if (item.kind === 'totalizador') {
+                    const tot = item as { kind: 'totalizador'; label: string; valor: number; pct?: number }
+                    const tone = tot.valor > 0 ? 'positive' : tot.valor < 0 ? 'negative' : 'neutral'
+                    return (
+                      <div
+                        key={`tot-${tot.label}`}
+                        className={`${styles.totalizadorRow} ${tone === 'positive' ? styles.totalizadorPositive : tone === 'negative' ? styles.totalizadorNegative : ''}`}
+                      >
+                        <span className={styles.totalizadorLabel}>{tot.label}</span>
+                        <div className={styles.totalizadorValues}>
+                          {dreComparativoPorMes.length > 0 ? (
+                            <>
+                              {dreComparativoPorMes.map(m => {
+                                const val = getMesTotalizadorValor(tot.label, m)
+                                const base = m.kpis.receitaOperacional > 0 ? m.kpis.receitaOperacional : 1
+                                return (
+                                  <div key={m.mes} className={styles.mesColCell}>
+                                    <span className={styles.mesColLabel}>{m.label}</span>
+                                    <strong className={styles.totalizadorValor} title={moeda(val)}>{valorTabela(val)}</strong>
+                                    <span className={styles.totalizadorPct}>{tot.pct !== undefined ? `${((val / base) * 100).toFixed(1)}%` : ''}</span>
+                                  </div>
+                                )
+                              })}
+                              {dreComparativoPorMes.length > 1 && (
+                                <div className={`${styles.mesColCell} ${styles.mesColTotal}`}>
+                                  <span className={styles.mesColLabel}>Total</span>
+                                  <strong className={styles.totalizadorValor} title={moeda(tot.valor)}>{valorTabela(tot.valor)}</strong>
+                                  <span className={styles.totalizadorPct}>{tot.pct !== undefined ? `${tot.pct.toFixed(1)}%` : ''}</span>
+                                </div>
+                              )}
+                              <span />
+                            </>
+                          ) : (
+                            <>
+                              {tot.pct !== undefined && <span className={styles.totalizadorPct}>{tot.pct.toFixed(1)}%</span>}
+                              <strong className={styles.totalizadorValor}>{moeda(tot.valor)}</strong>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  }
+                  const grupo = item.data
+                  const gKey = grupo.nome
+                  const gAberto = expandedGrupos.has(gKey)
+                  return (
+                    <div key={gKey} className={`${styles.grupoBlock} ${grupo.tipo === 'receita' ? styles.grupoBlockReceita : styles.grupoBlockDespesa}`}>
+                      <button className={styles.grupoBlockHeader} onClick={() => toggleGrupo(gKey)}>
+                        <div className={styles.grupoBlockLeft}>
+                          <span className={`${styles.grupoBadge} ${grupo.tipo === 'receita' ? styles.grupoBadgeReceita : styles.grupoBadgeDespesa}`}>
+                            {grupo.tipo === 'receita' ? '↑' : '↓'}
+                          </span>
+                          <strong className={styles.grupoBlockNome}>{grupo.nome}</strong>
+                          <span className={styles.grupoBlockCount}>
+                            {grupo.classificacoes.reduce((s, c) => s + c.items.length, 0)} lançamentos
+                          </span>
+                        </div>
+                        <div className={styles.grupoBlockRight}>
+                          {dreComparativoPorMes.length > 0 ? (
+                            <div className={styles.mesColValues}>
+                              {dreComparativoPorMes.map(m => {
+                                const gVal = getMesGrupoTotal(grupo.nome, m)
+                                const gBase = m.kpis.receitaOperacional > 0 ? m.kpis.receitaOperacional : null
+                                return (
+                                  <div key={m.mes} className={styles.mesColCell}>
+                                    <span className={styles.mesColLabel}>{m.label}</span>
+                                    <strong className={grupo.tipo === 'receita' ? styles.valorPositivo : styles.valorNegativo} title={moeda(gVal)}>
+                                      {valorTabela(gVal)}
+                                    </strong>
+                                    <span className={styles.totalizadorPct}>{gBase ? ((gVal / gBase) * 100).toFixed(1) + '%' : '—'}</span>
+                                  </div>
+                                )
+                              })}
+                              {dreComparativoPorMes.length > 1 && (
+                                <div className={`${styles.mesColCell} ${styles.mesColTotal}`}>
+                                  <span className={styles.mesColLabel}>Total</span>
+                                  <strong className={grupo.tipo === 'receita' ? styles.valorPositivo : styles.valorNegativo} title={moeda(grupo.total)}>
+                                    {valorTabela(grupo.total)}
+                                  </strong>
+                                  <span className={styles.totalizadorPct}>{kpis.receitaOperacional > 0 ? ((grupo.total / kpis.receitaOperacional) * 100).toFixed(1) + '%' : '—'}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <>
+                              <strong className={grupo.tipo === 'receita' ? styles.valorPositivo : styles.valorNegativo}>
+                                {moeda(grupo.total)}
+                              </strong>
+                              <span className={styles.totalizadorPct}>{kpis.receitaOperacional > 0 ? ((grupo.total / kpis.receitaOperacional) * 100).toFixed(1) + '%' : '—'}</span>
+                            </>
+                          )}
+                          <span className={styles.chevronIcon}>{gAberto ? '▲' : '▼'}</span>
+                        </div>
+                      </button>
 
-                <div className={styles.tipoGrid}>
-                  <button
-                    className={`${styles.tipoBtn} ${styles.tipoBtnReceita} ${form.tipo === 'receita' ? styles.tipoBtnSelected : ''}`}
-                    onClick={() => setForm(p => ({ ...p, tipo: 'receita' }))}
+                      {gAberto && (
+                        <div className={styles.clfList}>
+                          {grupo.classificacoes.map(clf => {
+                            const cKey = `${gKey}::${clf.nome}`
+                            const cAberto = expandedClfs.has(cKey)
+                            return (
+                              <div key={cKey} className={styles.clfBlock}>
+                                <button className={styles.clfBlockHeader} onClick={() => toggleClf(cKey)}>
+                                  <span className={styles.clfLeft}>
+                                    <span className={styles.clfNome}>{clf.nome}</span>
+                                    <span className={styles.clfCount}>{clf.items.length} lançamento(s)</span>
+                                  </span>
+                                  <div className={styles.clfRight}>
+                                    {dreComparativoPorMes.length > 0 ? (
+                                      <div className={styles.mesColValues}>
+                                        {dreComparativoPorMes.map(m => {
+                                          const cVal = getMesClfTotal(grupo.nome, clf.nome, m)
+                                          const cBase = m.kpis.receitaOperacional > 0 ? m.kpis.receitaOperacional : null
+                                          return (
+                                            <div key={m.mes} className={styles.mesColCell}>
+                                              <span className={styles.mesColLabel}>{m.label}</span>
+                                              <strong className={styles.clfTotal} title={moeda(cVal)}>{valorTabela(cVal)}</strong>
+                                              <span className={styles.totalizadorPct}>{cBase ? ((cVal / cBase) * 100).toFixed(1) + '%' : '—'}</span>
+                                            </div>
+                                          )
+                                        })}
+                                        {dreComparativoPorMes.length > 1 && (
+                                          <div className={`${styles.mesColCell} ${styles.mesColTotal}`}>
+                                            <span className={styles.mesColLabel}>Total</span>
+                                            <strong className={styles.clfTotal} title={moeda(clf.total)}>{valorTabela(clf.total)}</strong>
+                                            <span className={styles.totalizadorPct}>{kpis.receitaOperacional > 0 ? ((clf.total / kpis.receitaOperacional) * 100).toFixed(1) + '%' : '—'}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <strong className={styles.clfTotal}>{moeda(clf.total)}</strong>
+                                        <span className={styles.totalizadorPct}>{kpis.receitaOperacional > 0 ? ((clf.total / kpis.receitaOperacional) * 100).toFixed(1) + '%' : '—'}</span>
+                                      </>
+                                    )}
+                                    <span className={styles.chevronSm}>{cAberto ? '▲' : '▼'}</span>
+                                  </div>
+                                </button>
+                                {cAberto && (
+                                  <table className={styles.lancTable}>
+                                    <thead>
+                                      <tr><th>Data</th><th>Descrição</th><th>Valor</th><th className={styles.thPct}>% Rec. Op.</th><th></th></tr>
+                                    </thead>
+                                    <tbody>
+                                      {clf.items.map(item => (
+                                        <tr key={item.id}>
+                                          <td>{formatDate(item)}</td>
+                                          <td>{item.descricao ?? '—'}</td>
+                                          <td className={item.tipo === 'receita' ? styles.tdReceita : styles.tdDespesa}>
+                                            {moeda(Number(item.valor))}
+                                          </td>
+                                          <td className={styles.tdPct}>
+                                            {kpis.receitaOperacional > 0
+                                              ? pct((Number(item.valor) / kpis.receitaOperacional) * 100)
+                                              : '—'}
+                                          </td>
+                                          <td className={styles.actionCell}>
+                                            <button className={styles.editClassBtn} onClick={() => openEditClassModal(item)}>
+                                              Editar Classificação
+                                            </button>
+                                            <button className={styles.editBtn} onClick={() => openEditWizard(item)}>
+                                              Editar
+                                            </button>
+                                            <button className={styles.deleteBtn} onClick={() => deleteLancamento(item)}>
+                                              Excluir
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              </div>
+            )}
+          </section>
+
+          {/* ── Wizard modal ── */}
+          <ModalTransition open={showWizard}>
+            {showWizard && (
+            <div
+              className={styles.modalOverlay}
+              onPointerDown={wizardBackdropDismiss.handleBackdropPointerDown}
+              onClick={wizardBackdropDismiss.handleBackdropClick}
+            >
+              <div className={styles.modal} onClick={e => e.stopPropagation()}>
+
+                <div className={styles.modalHeader}>
+                  <h2>{editingId ? 'Editar lançamento' : 'Novo lançamento'}</h2>
+                  <button className={styles.closeBtn} onClick={closeWizard} aria-label="Fechar">✕</button>
+                </div>
+
+                <StepProgress current={step} />
+
+                {/* ── STEP 1: Tipo ── */}
+                {step === 1 && (
+                  <div className={styles.wizardStep}>
+                    <label className={styles.wizardLabel}>O que foi isso?</label>
+
+                    <div className={styles.tipoGrid}>
+                      <button
+                        className={`${styles.tipoBtn} ${styles.tipoBtnReceita} ${form.tipo === 'receita' ? styles.tipoBtnSelected : ''}`}
+                        onClick={() => setForm(p => ({ ...p, tipo: 'receita' }))}
+                      >
+                        <span className={styles.tipoArrow}>↑</span>
+                        <div className={styles.tipoBtnText}>
+                          <strong>Entrou dinheiro</strong>
+                          <small>Venda, serviço prestado, recebimento</small>
+                        </div>
+                      </button>
+
+                      <button
+                        className={`${styles.tipoBtn} ${styles.tipoBtnDespesa} ${form.tipo === 'despesa' ? styles.tipoBtnSelected : ''}`}
+                        onClick={() => setForm(p => ({ ...p, tipo: 'despesa' }))}
+                      >
+                        <span className={styles.tipoArrow}>↓</span>
+                        <div className={styles.tipoBtnText}>
+                          <strong>Saiu dinheiro</strong>
+                          <small>Compra, pagamento, fornecedor, custo</small>
+                        </div>
+                      </button>
+                    </div>
+
+                    <button className={styles.submit} disabled={!form.tipo} onClick={() => setStep(2)}>
+                      Próximo →
+                    </button>
+                  </div>
+                )}
+
+                {/* ── STEP 2: Data ── */}
+                {step === 2 && (
+                  <div className={styles.wizardStep}>
+                    <label className={styles.wizardLabel}>Em qual data?</label>
+                    <p className={styles.wizardHint}>
+                      Informe quando aconteceu esse {form.tipo === 'receita' ? 'recebimento' : 'pagamento'}.
+                    </p>
+                    <input
+                      type="date"
+                      className={styles.wizardInput}
+                      value={form.data}
+                      onChange={e => setForm(p => ({ ...p, data: e.target.value }))}
+                      max={today()}
+                      autoFocus
+                    />
+                    <button className={styles.submit} disabled={!form.data} onClick={() => setStep(3)}>
+                      Próximo →
+                    </button>
+                    <button className={styles.backBtn} onClick={() => setStep(1)}>← Voltar</button>
+                  </div>
+                )}
+
+                {/* ── STEP 3: Descrição ── */}
+                {step === 3 && (
+                  <div className={styles.wizardStep}>
+                    <label className={styles.wizardLabel}>
+                      {form.tipo === 'receita' ? 'O que você vendeu ou recebeu?' : 'O que você comprou ou pagou?'}
+                    </label>
+                    <input
+                      className={styles.wizardInput}
+                      value={form.descricao}
+                      onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))}
+                      placeholder={form.tipo === 'receita' ? 'Ex: Pagamento pelo serviço de design' : 'Ex: Compra de material de escritório'}
+                      autoFocus
+                    />
+                    <button className={styles.submit} disabled={!form.descricao.trim()} onClick={() => setStep(4)}>
+                      Próximo →
+                    </button>
+                    <button className={styles.backBtn} onClick={() => setStep(2)}>← Voltar</button>
+                  </div>
+                )}
+
+                {/* ── STEP 4: Valor ── */}
+                {step === 4 && (
+                  <div className={styles.wizardStep}>
+                    <label className={styles.wizardLabel}>Qual é o valor?</label>
+                    <input
+                      className={styles.wizardInput}
+                      value={form.valor}
+                      onChange={e => setForm(p => ({ ...p, valor: e.target.value }))}
+                      placeholder="Ex: 1.250,00"
+                      inputMode="decimal"
+                      autoFocus
+                    />
+                    <button className={styles.submit} disabled={valorNumerico <= 0} onClick={goToStep5}>
+                      Próximo →
+                    </button>
+                    <button className={styles.backBtn} onClick={() => setStep(3)}>← Voltar</button>
+                  </div>
+                )}
+
+                {/* ── STEP 5: Classificação ── */}
+                {step === 5 && (
+                  <div className={styles.wizardStep}>
+                    <label className={styles.wizardLabel}>Como classificar?</label>
+
+                    {aiLoading ? <AiSpinner /> : (
+                      <>
+                        {aiError && (
+                          <div className={styles.aiErrorBox}>
+                            <span className={styles.aiErrorIcon}>⚠️</span>
+                            <div>
+                              <strong>IA indisponível</strong>
+                              <p className={styles.aiErrorDetail}>{aiError}</p>
+                              <p className={styles.aiErrorHint}>Selecione manualmente. Verifique as configurações da IA.</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {aiWarning && !aiError && (
+                          <div className={styles.aiErrorBox}>
+                            <span className={styles.aiErrorIcon}>ℹ️</span>
+                            <div>
+                              <strong>Origem da sugestão</strong>
+                              <p className={styles.aiErrorDetail}>{aiWarning}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {!aiError && form.classificacaoNome && (
+                          <div className={styles.aiSelectedBox}>
+                            <span className={styles.aiSelectedLabel}>Classificação sugerida</span>
+                            <strong className={styles.aiSelectedValue}>{form.classificacaoNome}</strong>
+                          </div>
+                        )}
+
+                        {classificacoesFiltradas.length === 0 ? (
+                          <p className={styles.error}>
+                            Nenhuma classificação cadastrada para este tipo. Acesse Configurações Admin.
+                          </p>
+                        ) : (
+                          <div className={styles.listbox}>
+                            {classificacoesFiltradas.map(c => (
+                              <button
+                                key={c.id}
+                                className={`${styles.listboxItem} ${form.classificacaoNome === c.nome ? styles.listboxItemSelected : ''}`}
+                                onClick={() => {
+                                  const grupoMapeado = classificacaoToGrupo[c.nome] ?? form.grupo
+                                  setForm(p => ({ ...p, classificacaoNome: c.nome, grupo: grupoMapeado }))
+                                }}
+                              >
+                                <span className={styles.listboxRadio}>
+                                  {form.classificacaoNome === c.nome ? '●' : '○'}
+                                </span>
+                                {c.nome}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <button
+                      className={styles.submit}
+                      disabled={!form.classificacaoNome || aiLoading}
+                      onClick={() => setStep(6)}
+                    >
+                      Próximo →
+                    </button>
+                    <button className={styles.backBtn} onClick={() => setStep(4)}>← Voltar</button>
+                  </div>
+                )}
+
+                {/* ── STEP 6: Grupo ── */}
+                {step === 6 && (
+                  <div className={styles.wizardStep}>
+                    <label className={styles.wizardLabel}>{usaEstrutura ? 'Confira e salve' : 'Grupo / Categoria'}</label>
+
+                    {usaEstrutura ? (
+                      <>
+                        <p className={styles.wizardHint}>
+                          A conta escolhida define a linha do DRE. Para mudar, volte e escolha outra conta.
+                        </p>
+                        <div className={styles.aiSelectedBox}>
+                          <span className={styles.aiSelectedLabel}>Linha do DRE</span>
+                          <strong className={styles.aiSelectedValue}>{linhaDoGrupo(form.grupo)?.rotulo ?? form.grupo}</strong>
+                        </div>
+                      </>
+                    ) : (
+                    <>
+                    <p className={styles.wizardHint}>
+                      {form.grupo
+                        ? `IA sugeriu "${form.grupo}" — confirme ou altere abaixo.`
+                        : 'Selecione o grupo do plano de contas:'}
+                    </p>
+
+                    <div className={styles.listbox}>
+                      {grupos.filter(g => g.tipo === form.tipo).map(g => (
+                        <button
+                          key={g.id}
+                          className={`${styles.listboxItem} ${form.grupo === g.nome ? styles.listboxItemSelected : ''}`}
+                          onClick={() => setForm(p => ({ ...p, grupo: g.nome }))}
+                        >
+                          <span className={styles.listboxRadio}>{form.grupo === g.nome ? '●' : '○'}</span>
+                          {g.nome}
+                        </button>
+                      ))}
+                    </div>
+                    </>
+                    )}
+
+                    <div className={styles.summary}>
+                      <div className={styles.summaryRow}><span>Data</span><strong>{new Date(form.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</strong></div>
+                      <div className={styles.summaryRow}><span>Descrição</span><strong>{form.descricao}</strong></div>
+                      <div className={styles.summaryRow}><span>Valor</span><strong>{moeda(valorNumerico)}</strong></div>
+                      <div className={styles.summaryRow}><span>Classificação</span><strong>{form.classificacaoNome}</strong></div>
+                    </div>
+
+                    {error && <p className={styles.error}>{error}</p>}
+
+                    <button
+                      className={styles.submit}
+                      disabled={saving || !form.grupo.trim()}
+                      onClick={salvar}
+                    >
+                      {saving ? 'Salvando…' : editingId ? 'Salvar alterações' : 'Salvar lançamento'}
+                    </button>
+                    <button className={styles.backBtn} onClick={() => setStep(5)}>← Voltar</button>
+                  </div>
+                )}
+
+              </div>
+            </div>
+            )}
+          </ModalTransition>
+
+          {/* ── Modal: excluir período ── */}
+          <ModalTransition open={showDeletePeriodo}>
+            {showDeletePeriodo && (
+            <div
+              className={styles.modalOverlay}
+              onPointerDown={deletePeriodoBackdropDismiss.handleBackdropPointerDown}
+              onClick={deletePeriodoBackdropDismiss.handleBackdropClick}
+            >
+              <div className={styles.modal} onClick={e => e.stopPropagation()}>
+                <div className={styles.modalHeader}>
+                  <h2>Excluir período</h2>
+                  <button className={styles.closeBtn} onClick={() => setShowDeletePeriodo(false)} disabled={deletingPeriodo}>✕</button>
+                </div>
+
+                <label className={styles.filterLabel} style={{ marginBottom: 12 }}>
+                  O que excluir
+                  <select
+                    value={tipoExclusao}
+                    onChange={e => setTipoExclusao(e.target.value as TipoFiltro)}
+                    className={styles.filterSelect}
+                    disabled={deletingPeriodo}
                   >
-                    <span className={styles.tipoArrow}>↑</span>
+                    <option value="todos">Receitas e despesas</option>
+                    <option value="receita">Somente receitas</option>
+                    <option value="despesa">Somente despesas</option>
+                  </select>
+                </label>
+
+                <div className={styles.deletePeriodoResumo}>
+                  {(['receita', 'despesa'] as const).map(tipo => {
+                    const incluido = tipoExclusao === 'todos' || tipoExclusao === tipo
+                    return (
+                      <div
+                        key={tipo}
+                        className={`${styles.deletePeriodoResumoItem} ${incluido ? styles.deletePeriodoResumoItemAtivo : ''}`}
+                      >
+                        <span>{tipo === 'receita' ? 'Receitas' : 'Despesas'}</span>
+                        <strong>{resumoPeriodo[tipo].qtd} · {moeda(resumoPeriodo[tipo].total)}</strong>
+                        <small>{incluido ? 'será excluído' : 'será mantido'}</small>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>
+                  Você está prestes a excluir permanentemente:
+                </p>
+
+                <div className={styles.deletePeriodoInfo}>
+                  <span className={styles.deletePeriodoCount}>{idsPeriodoSelecionado.length}</span>
+                  <span className={styles.deletePeriodoDesc}>
+                    lançamento{idsPeriodoSelecionado.length !== 1 ? 's' : ''} de{' '}
+                    <strong>{labelPeriodo}</strong>
+                  </span>
+                </div>
+
+                {idsPeriodoSelecionado.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', margin: '16px 0' }}>
+                    Nenhum lançamento encontrado neste período.
+                  </p>
+                ) : (
+                  <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 24 }}>
+                    ⚠ Esta ação não pode ser desfeita.
+                  </p>
+                )}
+
+                <div className={styles.deletePeriodoBtns}>
+                  <button
+                    className={styles.cancelBtn}
+                    onClick={() => setShowDeletePeriodo(false)}
+                    disabled={deletingPeriodo}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    className={styles.deletePeriodoConfirmBtn}
+                    onClick={excluirLancamentosPeriodo}
+                    disabled={deletingPeriodo || idsPeriodoSelecionado.length === 0}
+                  >
+                    {deletingPeriodo ? 'Excluindo…' : `Excluir ${idsPeriodoSelecionado.length} lançamento${idsPeriodoSelecionado.length !== 1 ? 's' : ''}`}
+                  </button>
+                </div>
+              </div>
+            </div>
+            )}
+          </ModalTransition>
+
+          {/* ── Modal: Editar Classificação ── */}
+          <ModalTransition open={showEditClassModal && !!editClassItem}>
+            {showEditClassModal && editClassItem && (
+            <div
+              className={styles.modalOverlay}
+              onPointerDown={editClassBackdropDismiss.handleBackdropPointerDown}
+              onClick={editClassBackdropDismiss.handleBackdropClick}
+            >
+              <div className={styles.modal} onClick={e => e.stopPropagation()}>
+
+                <div className={styles.modalHeader}>
+                  <h2>Editar Classificação</h2>
+                  <button className={styles.closeBtn} onClick={closeEditClassModal} aria-label="Fechar">✕</button>
+                </div>
+
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
+                  {editClassItem.descricao ?? '—'}
+                </p>
+
+                {/* Tipo */}
+                <label className={styles.wizardLabel}>Tipo</label>
+                <div className={styles.tipoGrid} style={{ marginBottom: 20 }}>
+                  <button
+                    className={`${styles.tipoBtn} ${styles.tipoBtnReceita} ${editClassForm.tipo === 'receita' ? styles.tipoBtnSelected : ''}`}
+                    onClick={() => setEditClassForm(p => ({ ...p, tipo: 'receita', classificacaoNome: '', grupo: '' }))}
+                  >
                     <div className={styles.tipoBtnText}>
-                      <strong>Entrou dinheiro</strong>
-                      <small>Venda, serviço prestado, recebimento</small>
+                      <strong>Receita</strong>
                     </div>
                   </button>
-
                   <button
-                    className={`${styles.tipoBtn} ${styles.tipoBtnDespesa} ${form.tipo === 'despesa' ? styles.tipoBtnSelected : ''}`}
-                    onClick={() => setForm(p => ({ ...p, tipo: 'despesa' }))}
+                    className={`${styles.tipoBtn} ${styles.tipoBtnDespesa} ${editClassForm.tipo === 'despesa' ? styles.tipoBtnSelected : ''}`}
+                    onClick={() => setEditClassForm(p => ({ ...p, tipo: 'despesa', classificacaoNome: '', grupo: '' }))}
                   >
-                    <span className={styles.tipoArrow}>↓</span>
                     <div className={styles.tipoBtnText}>
-                      <strong>Saiu dinheiro</strong>
-                      <small>Compra, pagamento, fornecedor, custo</small>
+                      <strong>Despesa</strong>
                     </div>
                   </button>
                 </div>
 
-                <button className={styles.submit} disabled={!form.tipo} onClick={() => setStep(2)}>
-                  Próximo →
-                </button>
-              </div>
-            )}
-
-            {/* ── STEP 2: Data ── */}
-            {step === 2 && (
-              <div className={styles.wizardStep}>
-                <label className={styles.wizardLabel}>Em qual data?</label>
-                <p className={styles.wizardHint}>
-                  Informe quando aconteceu esse {form.tipo === 'receita' ? 'recebimento' : 'pagamento'}.
-                </p>
-                <input
-                  type="date"
-                  className={styles.wizardInput}
-                  value={form.data}
-                  onChange={e => setForm(p => ({ ...p, data: e.target.value }))}
-                  max={today()}
-                  autoFocus
-                />
-                <button className={styles.submit} disabled={!form.data} onClick={() => setStep(3)}>
-                  Próximo →
-                </button>
-                <button className={styles.backBtn} onClick={() => setStep(1)}>← Voltar</button>
-              </div>
-            )}
-
-            {/* ── STEP 3: Descrição ── */}
-            {step === 3 && (
-              <div className={styles.wizardStep}>
-                <label className={styles.wizardLabel}>
-                  {form.tipo === 'receita' ? 'O que você vendeu ou recebeu?' : 'O que você comprou ou pagou?'}
-                </label>
-                <input
-                  className={styles.wizardInput}
-                  value={form.descricao}
-                  onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))}
-                  placeholder={form.tipo === 'receita' ? 'Ex: Pagamento pelo serviço de design' : 'Ex: Compra de material de escritório'}
-                  autoFocus
-                />
-                <button className={styles.submit} disabled={!form.descricao.trim()} onClick={() => setStep(4)}>
-                  Próximo →
-                </button>
-                <button className={styles.backBtn} onClick={() => setStep(2)}>← Voltar</button>
-              </div>
-            )}
-
-            {/* ── STEP 4: Valor ── */}
-            {step === 4 && (
-              <div className={styles.wizardStep}>
-                <label className={styles.wizardLabel}>Qual é o valor?</label>
-                <input
-                  className={styles.wizardInput}
-                  value={form.valor}
-                  onChange={e => setForm(p => ({ ...p, valor: e.target.value }))}
-                  placeholder="Ex: 1.250,00"
-                  inputMode="decimal"
-                  autoFocus
-                />
-                <button className={styles.submit} disabled={valorNumerico <= 0} onClick={goToStep5}>
-                  Próximo →
-                </button>
-                <button className={styles.backBtn} onClick={() => setStep(3)}>← Voltar</button>
-              </div>
-            )}
-
-            {/* ── STEP 5: Classificação ── */}
-            {step === 5 && (
-              <div className={styles.wizardStep}>
-                <label className={styles.wizardLabel}>Como classificar?</label>
-
-                {aiLoading ? <AiSpinner /> : (
+                {/* Classificação */}
+                {editClassForm.tipo && (
                   <>
-                    {aiError && (
-                      <div className={styles.aiErrorBox}>
-                        <span className={styles.aiErrorIcon}>⚠️</span>
-                        <div>
-                          <strong>IA indisponível</strong>
-                          <p className={styles.aiErrorDetail}>{aiError}</p>
-                          <p className={styles.aiErrorHint}>Selecione manualmente. Verifique as configurações da IA.</p>
-                        </div>
-                      </div>
-                    )}
+                    <label className={styles.wizardLabel}>Classificação</label>
+                    <div className={styles.listbox} style={{ marginBottom: 20 }}>
+                      {classificacoes.filter(c => c.tipo === editClassForm.tipo).map(c => (
+                        <button
+                          key={c.id}
+                          className={`${styles.listboxItem} ${editClassForm.classificacaoNome === c.nome ? styles.listboxItemSelected : ''}`}
+                          onClick={() => {
+                            setEditClassForm(p => ({
+                              ...p,
+                              classificacaoNome: c.nome,
+                              grupo: classificacaoToGrupo[c.nome] ?? p.grupo,
+                            }))
+                          }}
+                        >
+                          <span className={styles.listboxRadio}>{editClassForm.classificacaoNome === c.nome ? '●' : '○'}</span>
+                          {c.nome}
+                        </button>
+                      ))}
+                    </div>
 
-                    {aiWarning && !aiError && (
-                      <div className={styles.aiErrorBox}>
-                        <span className={styles.aiErrorIcon}>ℹ️</span>
-                        <div>
-                          <strong>Sugestão por fallback</strong>
-                          <p className={styles.aiErrorDetail}>{aiWarning}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {!aiError && form.classificacaoNome && (
-                      <div className={styles.aiSelectedBox}>
-                        <span className={styles.aiSelectedLabel}>IA identificou</span>
-                        <strong className={styles.aiSelectedValue}>{form.classificacaoNome}</strong>
-                      </div>
-                    )}
-
-                    {classificacoesFiltradas.length === 0 ? (
-                      <p className={styles.error}>
-                        Nenhuma classificação cadastrada para este tipo. Acesse Configurações Admin.
+                    {/* Grupo */}
+                    <label className={styles.wizardLabel}>{usaEstrutura ? 'Linha do DRE' : 'Grupo'}</label>
+                    {usaEstrutura ? (
+                      <p className={styles.wizardHint} style={{ marginBottom: 20 }}>
+                        {editClassForm.classificacaoNome && classificacaoToGrupo[editClassForm.classificacaoNome]
+                          ? <><strong>{linhaDoGrupo(classificacaoToGrupo[editClassForm.classificacaoNome])?.rotulo}</strong> — definida pela conta escolhida.</>
+                          : 'Escolha uma conta acima: ela define a linha do DRE.'}
                       </p>
                     ) : (
-                      <div className={styles.listbox}>
-                        {classificacoesFiltradas.map(c => (
-                          <button
-                            key={c.id}
-                            className={`${styles.listboxItem} ${form.classificacaoNome === c.nome ? styles.listboxItemSelected : ''}`}
-                            onClick={() => {
-                              const grupoMapeado = classificacaoToGrupo[c.nome] ?? form.grupo
-                              setForm(p => ({ ...p, classificacaoNome: c.nome, grupo: grupoMapeado }))
-                            }}
-                          >
-                            <span className={styles.listboxRadio}>
-                              {form.classificacaoNome === c.nome ? '●' : '○'}
-                            </span>
-                            {c.nome}
-                          </button>
-                        ))}
-                      </div>
+                    <div className={styles.listbox} style={{ marginBottom: 20 }}>
+                      {grupos.filter(g => g.tipo === editClassForm.tipo).map(g => (
+                        <button
+                          key={g.id}
+                          className={`${styles.listboxItem} ${editClassForm.grupo === g.nome ? styles.listboxItemSelected : ''}`}
+                          onClick={() => setEditClassForm(p => ({ ...p, grupo: g.nome }))}
+                        >
+                          <span className={styles.listboxRadio}>{editClassForm.grupo === g.nome ? '●' : '○'}</span>
+                          {g.nome}
+                        </button>
+                      ))}
+                    </div>
                     )}
                   </>
                 )}
 
-                <button
-                  className={styles.submit}
-                  disabled={!form.classificacaoNome || aiLoading}
-                  onClick={() => setStep(6)}
-                >
-                  Próximo →
-                </button>
-                <button className={styles.backBtn} onClick={() => setStep(4)}>← Voltar</button>
-              </div>
-            )}
-
-            {/* ── STEP 6: Grupo ── */}
-            {step === 6 && (
-              <div className={styles.wizardStep}>
-                <label className={styles.wizardLabel}>Grupo / Categoria</label>
-
-                <p className={styles.wizardHint}>
-                  {form.grupo
-                    ? `IA sugeriu "${form.grupo}" — confirme ou altere abaixo.`
-                    : 'Selecione o grupo do plano de contas:'}
-                </p>
-
-                <div className={styles.listbox}>
-                  {grupos.filter(g => g.tipo === form.tipo).map(g => (
-                    <button
-                      key={g.id}
-                      className={`${styles.listboxItem} ${form.grupo === g.nome ? styles.listboxItemSelected : ''}`}
-                      onClick={() => setForm(p => ({ ...p, grupo: g.nome }))}
-                    >
-                      <span className={styles.listboxRadio}>{form.grupo === g.nome ? '●' : '○'}</span>
-                      {g.nome}
-                    </button>
-                  ))}
-                </div>
-
-                <div className={styles.summary}>
-                  <div className={styles.summaryRow}><span>Data</span><strong>{new Date(form.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</strong></div>
-                  <div className={styles.summaryRow}><span>Descrição</span><strong>{form.descricao}</strong></div>
-                  <div className={styles.summaryRow}><span>Valor</span><strong>{moeda(valorNumerico)}</strong></div>
-                  <div className={styles.summaryRow}><span>Classificação</span><strong>{form.classificacaoNome}</strong></div>
-                </div>
-
-                {error && <p className={styles.error}>{error}</p>}
+                {editClassError && <p className={styles.error}>{editClassError}</p>}
 
                 <button
                   className={styles.submit}
-                  disabled={saving || !form.grupo.trim()}
-                  onClick={salvar}
+                  disabled={editClassSaving || !editClassForm.tipo || !editClassForm.classificacaoNome || (!usaEstrutura && !editClassForm.grupo.trim())}
+                  onClick={salvarClassificacao}
                 >
-                  {saving ? 'Salvando…' : editingId ? 'Salvar alterações' : 'Salvar lançamento'}
+                  {editClassSaving ? 'Salvando…' : 'Salvar classificação'}
                 </button>
-                <button className={styles.backBtn} onClick={() => setStep(5)}>← Voltar</button>
               </div>
+            </div>
             )}
-
-          </div>
+          </ModalTransition>
         </div>
-        )}
-      </ModalTransition>
-
-      {/* ── Modal: excluir período ── */}
-      <ModalTransition open={showDeletePeriodo}>
-        {showDeletePeriodo && (
-        <div
-          className={styles.modalOverlay}
-          onPointerDown={deletePeriodoBackdropDismiss.handleBackdropPointerDown}
-          onClick={deletePeriodoBackdropDismiss.handleBackdropClick}
-        >
-          <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h2>Excluir período</h2>
-              <button className={styles.closeBtn} onClick={() => setShowDeletePeriodo(false)} disabled={deletingPeriodo}>✕</button>
-            </div>
-
-            <label className={styles.filterLabel} style={{ marginBottom: 12 }}>
-              O que excluir
-              <select
-                value={tipoExclusao}
-                onChange={e => setTipoExclusao(e.target.value as TipoFiltro)}
-                className={styles.filterSelect}
-                disabled={deletingPeriodo}
-              >
-                <option value="todos">Receitas e despesas</option>
-                <option value="receita">Somente receitas</option>
-                <option value="despesa">Somente despesas</option>
-              </select>
-            </label>
-
-            <div className={styles.deletePeriodoResumo}>
-              {(['receita', 'despesa'] as const).map(tipo => {
-                const incluido = tipoExclusao === 'todos' || tipoExclusao === tipo
-                return (
-                  <div
-                    key={tipo}
-                    className={`${styles.deletePeriodoResumoItem} ${incluido ? styles.deletePeriodoResumoItemAtivo : ''}`}
-                  >
-                    <span>{tipo === 'receita' ? 'Receitas' : 'Despesas'}</span>
-                    <strong>{resumoPeriodo[tipo].qtd} · {moeda(resumoPeriodo[tipo].total)}</strong>
-                    <small>{incluido ? 'será excluído' : 'será mantido'}</small>
-                  </div>
-                )
-              })}
-            </div>
-
-            <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>
-              Você está prestes a excluir permanentemente:
-            </p>
-
-            <div className={styles.deletePeriodoInfo}>
-              <span className={styles.deletePeriodoCount}>{idsPeriodoSelecionado.length}</span>
-              <span className={styles.deletePeriodoDesc}>
-                lançamento{idsPeriodoSelecionado.length !== 1 ? 's' : ''} de{' '}
-                <strong>{labelPeriodo}</strong>
-              </span>
-            </div>
-
-            {idsPeriodoSelecionado.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', margin: '16px 0' }}>
-                Nenhum lançamento encontrado neste período.
-              </p>
-            ) : (
-              <p style={{ color: '#ff9f9f', fontSize: 13, marginBottom: 24 }}>
-                ⚠ Esta ação não pode ser desfeita.
-              </p>
-            )}
-
-            <div className={styles.deletePeriodoBtns}>
-              <button
-                className={styles.cancelBtn}
-                onClick={() => setShowDeletePeriodo(false)}
-                disabled={deletingPeriodo}
-              >
-                Cancelar
-              </button>
-              <button
-                className={styles.deletePeriodoConfirmBtn}
-                onClick={excluirLancamentosPeriodo}
-                disabled={deletingPeriodo || idsPeriodoSelecionado.length === 0}
-              >
-                {deletingPeriodo ? 'Excluindo…' : `Excluir ${idsPeriodoSelecionado.length} lançamento${idsPeriodoSelecionado.length !== 1 ? 's' : ''}`}
-              </button>
-            </div>
-          </div>
-        </div>
-        )}
-      </ModalTransition>
-
-      {/* ── Modal: Editar Classificação ── */}
-      <ModalTransition open={showEditClassModal && !!editClassItem}>
-        {showEditClassModal && editClassItem && (
-        <div
-          className={styles.modalOverlay}
-          onPointerDown={editClassBackdropDismiss.handleBackdropPointerDown}
-          onClick={editClassBackdropDismiss.handleBackdropClick}
-        >
-          <div className={styles.modal} onClick={e => e.stopPropagation()}>
-
-            <div className={styles.modalHeader}>
-              <h2>Editar Classificação</h2>
-              <button className={styles.closeBtn} onClick={closeEditClassModal} aria-label="Fechar">✕</button>
-            </div>
-
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
-              {editClassItem.descricao ?? '—'}
-            </p>
-
-            {/* Tipo */}
-            <label className={styles.wizardLabel}>Tipo</label>
-            <div className={styles.tipoGrid} style={{ marginBottom: 20 }}>
-              <button
-                className={`${styles.tipoBtn} ${styles.tipoBtnReceita} ${editClassForm.tipo === 'receita' ? styles.tipoBtnSelected : ''}`}
-                onClick={() => setEditClassForm(p => ({ ...p, tipo: 'receita', classificacaoNome: '', grupo: '' }))}
-              >
-                <div className={styles.tipoBtnText}>
-                  <strong>Receita</strong>
-                </div>
-              </button>
-              <button
-                className={`${styles.tipoBtn} ${styles.tipoBtnDespesa} ${editClassForm.tipo === 'despesa' ? styles.tipoBtnSelected : ''}`}
-                onClick={() => setEditClassForm(p => ({ ...p, tipo: 'despesa', classificacaoNome: '', grupo: '' }))}
-              >
-                <div className={styles.tipoBtnText}>
-                  <strong>Despesa</strong>
-                </div>
-              </button>
-            </div>
-
-            {/* Classificação */}
-            {editClassForm.tipo && (
-              <>
-                <label className={styles.wizardLabel}>Classificação</label>
-                <div className={styles.listbox} style={{ marginBottom: 20 }}>
-                  {classificacoes.filter(c => c.tipo === editClassForm.tipo).map(c => (
-                    <button
-                      key={c.id}
-                      className={`${styles.listboxItem} ${editClassForm.classificacaoNome === c.nome ? styles.listboxItemSelected : ''}`}
-                      onClick={() => {
-                        setEditClassForm(p => ({
-                          ...p,
-                          classificacaoNome: c.nome,
-                          grupo: classificacaoToGrupo[c.nome] ?? p.grupo,
-                        }))
-                      }}
-                    >
-                      <span className={styles.listboxRadio}>{editClassForm.classificacaoNome === c.nome ? '●' : '○'}</span>
-                      {c.nome}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Grupo */}
-                <label className={styles.wizardLabel}>Grupo</label>
-                <div className={styles.listbox} style={{ marginBottom: 20 }}>
-                  {grupos.filter(g => g.tipo === editClassForm.tipo).map(g => (
-                    <button
-                      key={g.id}
-                      className={`${styles.listboxItem} ${editClassForm.grupo === g.nome ? styles.listboxItemSelected : ''}`}
-                      onClick={() => setEditClassForm(p => ({ ...p, grupo: g.nome }))}
-                    >
-                      <span className={styles.listboxRadio}>{editClassForm.grupo === g.nome ? '●' : '○'}</span>
-                      {g.nome}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {editClassError && <p className={styles.error}>{editClassError}</p>}
-
-            <button
-              className={styles.submit}
-              disabled={editClassSaving || !editClassForm.tipo || !editClassForm.classificacaoNome || !editClassForm.grupo.trim()}
-              onClick={salvarClassificacao}
-            >
-              {editClassSaving ? 'Salvando…' : 'Salvar classificação'}
-            </button>
-          </div>
-        </div>
-        )}
-      </ModalTransition>
+      </div>
     </div>
   )
 }

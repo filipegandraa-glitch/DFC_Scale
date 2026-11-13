@@ -1,0 +1,244 @@
+/* Resumo do resultado — lista no estilo da Precificação, sobre as variáveis de tema
+   da Análise DFC. Cores das faixas iguais às do selo; o nome da faixa sempre aparece escrito. */
+
+.resumo {
+  --faixa-ideal-cor:     #5cc8a8;
+  --faixa-aceitavel-cor: #e6c869;
+  --faixa-media-cor:     #b5b0a3;
+  --faixa-atencao-cor:   #ef8a5e;
+  margin-top: 34px;
+}
+
+:global(html[data-theme="light"]) .resumo {
+  --faixa-ideal-cor:     #0f7a5f;
+  --faixa-aceitavel-cor: #8a6400;
+  --faixa-media-cor:     #52525b;
+  --faixa-atencao-cor:   #b4471b;
+}
+/* Os mesmos tons escurecidos do selo no marfim (≥5:1). */
+:global(:root .tema-marfim) .resumo {
+  --faixa-ideal-cor:     #0b6650;
+  --faixa-aceitavel-cor: #735300;
+  --faixa-media-cor:     #52525b;
+  --faixa-atencao-cor:   #9c3a14;
+}
+
+.topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px 24px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topoTexto { min-width: 0; }
+
+.titulo {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+}
+
+.subtitulo {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.topoDir {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.btnReferencias {
+  background: none;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: #aaa;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.btnReferencias:hover {
+  border-color: rgba(213, 175, 69, 0.5);
+  color: var(--gold-light);
+  background: rgba(213, 175, 69, 0.07);
+}
+
+.btnReferencias:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+:global(html[data-theme="light"]) .btnReferencias,
+:global(:root .tema-marfim) .btnReferencias {
+  border-color: var(--border);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+}
+
+:global(:root .tema-marfim) .btnReferencias:hover {
+  border-color: var(--gold);
+  color: var(--gold-dark);
+}
+
+/* ── Contagem por faixa ── */
+.contagem {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.contagemItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.contagemItem strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.contagemPonto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.contagem_ideal .contagemPonto { background: var(--faixa-ideal-cor); }
+.contagem_aceitavel .contagemPonto { background: var(--faixa-aceitavel-cor); }
+.contagem_media .contagemPonto { background: transparent; box-shadow: inset 0 0 0 1.5px var(--faixa-media-cor); }
+.contagem_atencao .contagemPonto { background: var(--faixa-atencao-cor); }
+
+/* ── Lista ── */
+.lista {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.lista thead th {
+  padding: 14px 12px 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.lista tbody tr { cursor: default; }
+.lista tbody tr:hover { background: rgba(22, 20, 15, 0.025); }
+
+.lista tbody th,
+.lista tbody td {
+  padding: 13px 12px 13px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  font-weight: 400;
+}
+
+.lista .colNum {
+  text-align: right;
+  padding-right: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+.colLinha { width: 34%; }
+
+.rotulo {
+  display: block;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.meses {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--faixa-atencao-cor);
+}
+
+.lista .colPct {
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.colValor { color: var(--text-muted); white-space: nowrap; }
+
+.colRef { color: var(--text-muted); white-space: nowrap; }
+
+.colStatus .selo { margin-top: 0; }
+
+/* Margem de contribuição: primeira linha, em destaque */
+.linhaDestaque .rotulo { font-weight: 700; }
+.linhaDestaque .colPct { font-size: 16px; }
+
+.vazio,
+.nota {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.vazio { font-size: 13px; }
+
+/* Celular: cada item em 2 linhas (nome + status / números), sem rolagem lateral */
+@media (max-width: 700px) {
+  .lista,
+  .lista tbody { display: block; }
+
+  .lista thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .lista tbody tr {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    column-gap: 14px;
+    row-gap: 4px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .lista tbody th,
+  .lista tbody td {
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .lista .colLinha { grid-column: 1 / 4; grid-row: 1; width: auto; }
+  .lista .colStatus { grid-column: 4; grid-row: 1; justify-self: end; }
+  .lista .colPct { grid-column: 1; grid-row: 2; text-align: left; padding-right: 0; }
+  .lista .colValor { grid-column: 2; grid-row: 2; text-align: left; padding-right: 0; }
+  .lista .colValor::before { content: 'R$ '; }
+  .lista .colRef { grid-column: 3 / 5; grid-row: 2; text-align: right; white-space: normal; font-size: 13px; }
+}

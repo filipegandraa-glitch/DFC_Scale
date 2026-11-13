@@ -29,6 +29,30 @@
   --cat-5: #e87ba4;
   --cat-outros: #b4b2ac;
 }
+/* Faixa grafite da Análise DFC: escura nos dois temas do site, então as
+   MiniColunas dela mantêm a paleta escura mesmo com html[data-theme="light"]. */
+:global(:root .tema-grafite) .mini {
+  --serie-receita: #13a5a0;
+  --serie-despesa: #e06060;
+  --grade: rgba(255, 255, 255, 0.07);
+  --dica-fundo: #1e1e1e;
+}
+/* Corpo marfim da Análise DFC (vale nos dois temas: :root eleva a especificidade
+   acima do html[data-theme="light"]). As MiniColunas da faixa escura ficam fora. */
+:global(:root .tema-marfim) .raiz,
+:global(:root .tema-marfim) .mini,
+:global(:root .tema-marfim) .card {
+  --serie-receita: #1c6b52;
+  --serie-despesa: #9a3b2c;
+  --grade: rgba(22, 20, 15, 0.07);
+  --dica-fundo: #ffffff;
+  --cat-1: #16140f;
+  --cat-2: #c2a063;
+  --cat-3: #1c4a3d;
+  --cat-4: #2e5a66;
+  --cat-5: #8b7a55;
+  --cat-outros: #cfc7b4;
+}
 
 .fundoReceita { background: var(--serie-receita); }
 .fundoDespesa { background: var(--serie-despesa); }
@@ -245,4 +269,43 @@
   font-size: 12px;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Corpo marfim: cartões planos separados por fios (como a Precificação) ── */
+:global(:root .tema-marfim) .raiz {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border);
+}
+:global(:root .tema-marfim) .card {
+  padding: 22px 24px 24px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+:global(:root .tema-marfim) .card:first-child { border-left: 0; padding-left: 0; }
+:global(:root .tema-marfim) .card:last-child { padding-right: 0; }
+:global(:root .tema-marfim) .titulo {
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+:global(:root .tema-marfim) .subtitulo { font-size: 13px; }
+:global(:root .tema-marfim) .roscaCentroValor {
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 18px;
+}
+
+@media (max-width: 1180px) {
+  :global(:root .tema-marfim) .raiz { grid-template-columns: minmax(0, 1fr); }
+  :global(:root .tema-marfim) .card,
+  :global(:root .tema-marfim) .card:first-child,
+  :global(:root .tema-marfim) .card:last-child {
+    padding: 22px 0;
+    border-left: 0;
+  }
+  :global(:root .tema-marfim) .card + .card { border-top: 1px solid var(--border); }
 }

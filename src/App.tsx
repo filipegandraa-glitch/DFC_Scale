@@ -10,18 +10,21 @@ import AnaliseDrePage from './pages/AnaliseDrePage'
 import EmpresaGatePage from './pages/EmpresaGatePage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import EstruturaDrePage from './pages/EstruturaDrePage'
 import PerfilAdminPage from './pages/PerfilAdminPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import TermosPage from './pages/TermosPage'
 
 // DFC Scale: fork do PainelGestaa com apenas a Análise DFC.
 // Rotas: '/' (landing sem login, DFC com login), '/entrar' (login),
-// '/termos' (termos de uso), '/reset-password' e '/referencias' (Referências
-// do DRE, aberta pelo menu de perfil: todos consultam, só profiles.role = 'admin' edita).
+// '/termos' (termos de uso), '/reset-password', '/referencias' (Referências do DRE)
+// e '/estrutura' (Estrutura do DRE). As duas últimas abrem pelo menu de perfil:
+// todos consultam, só profiles.role = 'admin' edita.
 const DFC_PATH = '/'
 const ENTRAR_PATH = '/entrar'
 const TERMOS_PATH = '/termos'
 const REFERENCIAS_PATH = '/referencias'
+const ESTRUTURA_PATH = '/estrutura'
 // Caminho do app DFC no cadastro de apps do PainelGestaa (tabela `apps`),
 // usado para respeitar a liberação de acesso feita pelo admin.
 const DFC_INTERNAL_LINK = '/analise-dre'
@@ -266,18 +269,19 @@ function App() {
     }
   }, [user, pathname])
 
-  // Sair das Referências do DRE com alterações não salvas (Voltar do navegador ou menu de perfil).
-  const guardaSaidaRef = useRef<(() => boolean) | null>(null)
+  // Sair de uma tela de edição (Referências ou Estrutura do DRE) com alterações não
+  // salvas: Voltar do navegador ou menu de perfil perguntam antes.
+  const guardaSaidaRef = useRef<{ guarda: () => boolean; caminho: string } | null>(null)
   const registrarGuardaSaida = useCallback((guarda: (() => boolean) | null) => {
-    guardaSaidaRef.current = guarda
+    guardaSaidaRef.current = guarda ? { guarda, caminho: window.location.pathname } : null
   }, [])
-  const podeSairDaTela = () => !guardaSaidaRef.current || guardaSaidaRef.current()
+  const podeSairDaTela = () => !guardaSaidaRef.current || guardaSaidaRef.current.guarda()
 
   useEffect(() => {
     const onPopState = () => {
-      const guarda = guardaSaidaRef.current
-      if (guarda && window.location.pathname !== REFERENCIAS_PATH && !guarda()) {
-        window.history.pushState({}, '', REFERENCIAS_PATH)
+      const atual = guardaSaidaRef.current
+      if (atual && window.location.pathname !== atual.caminho && !atual.guarda()) {
+        window.history.pushState({}, '', atual.caminho)
         return
       }
       setPathname(window.location.pathname)
@@ -297,11 +301,15 @@ function App() {
     setPathname(DFC_PATH)
   }
 
-  const abrirReferencias = useCallback(() => {
-    if (window.location.pathname === REFERENCIAS_PATH) return
-    window.history.pushState({}, '', REFERENCIAS_PATH)
-    setPathname(REFERENCIAS_PATH)
+  const abrirTela = useCallback((caminho: string) => {
+    if (window.location.pathname === caminho) return
+    const atual = guardaSaidaRef.current
+    if (atual && !atual.guarda()) return
+    window.history.pushState({}, '', caminho)
+    setPathname(caminho)
   }, [])
+  const abrirReferencias = useCallback(() => abrirTela(REFERENCIAS_PATH), [abrirTela])
+  const abrirEstrutura = useCallback(() => abrirTela(ESTRUTURA_PATH), [abrirTela])
 
   const selecionarEmpresa = (emp: Empresa) => {
     localStorage.setItem(EMPRESA_STORAGE_KEY, JSON.stringify(emp))
@@ -399,9 +407,25 @@ function App() {
       cargo={rotuloCargo(isAdmin, user.tipoUsuario)}
       podeEditarReferencias={isAdmin}
       onAbrirReferencias={abrirReferencias}
+      onAbrirEstrutura={abrirEstrutura}
       onSair={() => { if (podeSairDaTela()) void handleLogout() }}
     />
   )
+
+  // Estrutura do DRE: todos consultam; só o ADM edita (o RLS também barra a gravação).
+  if (pathname === ESTRUTURA_PATH) {
+    return (
+      <ErrorBoundary>
+        <EstruturaDrePage
+          podeEditar={isAdmin}
+          nomeUsuario={user.name}
+          menuPerfil={menuPerfil}
+          onVoltar={() => navigate(DFC_PATH)}
+          registrarGuardaSaida={registrarGuardaSaida}
+        />
+      </ErrorBoundary>
+    )
+  }
 
   // Referências do DRE: todos consultam; só o ADM edita (o RLS também barra a gravação).
   if (pathname === REFERENCIAS_PATH) {
@@ -442,6 +466,8 @@ function App() {
         empresa={empresaSelecionada}
         onTrocarEmpresa={trocarEmpresa}
         menuPerfil={menuPerfil}
+        onAbrirReferencias={abrirReferencias}
+        podeEditarReferencias={isAdmin}
       />
     </ErrorBoundary>
   )

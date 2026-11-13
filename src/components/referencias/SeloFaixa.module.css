@@ -23,7 +23,8 @@
   cursor: default;
 }
 
-:global(html[data-theme="light"]) .selo {
+:global(html[data-theme="light"]) .selo,
+:global(:root .tema-marfim) .selo {
   --faixa-ideal-cor:     #0f7a5f;
   --faixa-ideal-fundo:   rgba(15, 122, 95, 0.1);
   --faixa-aceitavel-cor: #8a6400;
@@ -31,6 +32,13 @@
   --faixa-media-cor:     #52525b;
   --faixa-atencao-cor:   #b4471b;
   --faixa-atencao-fundo: rgba(234, 88, 12, 0.12);
+}
+/* No marfim (e nos fundos verde/rosado dos KPIs) os tons acima ficam abaixo de
+   4.5:1; estes passam de 5:1 com os mesmos fundos. */
+:global(:root .tema-marfim) .selo {
+  --faixa-ideal-cor:     #0b6650;
+  --faixa-aceitavel-cor: #735300;
+  --faixa-atencao-cor:   #9c3a14;
 }
 
 .faixa_ideal { color: var(--faixa-ideal-cor); background: var(--faixa-ideal-fundo); }

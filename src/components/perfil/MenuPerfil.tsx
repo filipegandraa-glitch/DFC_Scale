@@ -11,12 +11,13 @@ export interface MenuPerfilProps {
   cargo: string
   podeEditarReferencias: boolean
   onAbrirReferencias: () => void
+  onAbrirEstrutura: () => void
   onSair: () => void
 }
 
 const apelidoDoEmail = (email: string, nome: string) => email.split('@')[0] || nome
 
-export function MenuPerfil({ nome, email, cargo, podeEditarReferencias, onAbrirReferencias, onSair }: MenuPerfilProps) {
+export function MenuPerfil({ nome, email, cargo, podeEditarReferencias, onAbrirReferencias, onAbrirEstrutura, onSair }: MenuPerfilProps) {
   const [aberto, setAberto] = useState(false)
   const raizRef = useRef<HTMLDivElement>(null)
   const gatilhoRef = useRef<HTMLButtonElement>(null)
@@ -127,6 +128,21 @@ export function MenuPerfil({ nome, email, cargo, podeEditarReferencias, onAbrirR
               <span>Referências do DRE</span>
               <span className={styles.itemDetalhe}>
                 {podeEditarReferencias ? 'Ver e editar as faixas' : 'Consultar as faixas do método'}
+              </span>
+            </span>
+          </button>
+
+          <button type="button" role="menuitem" className={styles.item} onClick={escolher(onAbrirEstrutura)}>
+            <svg className={styles.icone} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="3" y="3" width="7" height="5" rx="1.2" />
+              <rect x="14" y="10" width="7" height="5" rx="1.2" />
+              <rect x="14" y="17" width="7" height="4" rx="1.2" />
+              <path d="M6.5 8v10.5H14M6.5 12.5H14" />
+            </svg>
+            <span className={styles.itemTexto}>
+              <span>Estrutura do DRE</span>
+              <span className={styles.itemDetalhe}>
+                {podeEditarReferencias ? 'Linhas, contas e segmentos' : 'Consultar linhas e contas'}
               </span>
             </span>
           </button>

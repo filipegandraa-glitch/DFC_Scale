@@ -1,0 +1,384 @@
+/* Estrutura do DRE — usa as variáveis --cs-* definidas em PerfilAdminPage.module.css (.page). */
+
+.conteudo { max-width: 920px; }
+
+/* ── Segmentos ── */
+.segmentos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.segmento,
+.segmentoNovo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.segmento {
+  color: var(--cs-texto-2);
+  background: transparent;
+  border: 1px solid var(--cs-linha);
+}
+
+.segmento:hover { color: var(--cs-marfim); border-color: rgba(244, 239, 227, 0.28); }
+
+.segmentoAtivo {
+  color: var(--cs-grafite);
+  background: var(--cs-dourado);
+  border-color: var(--cs-dourado);
+}
+
+.segmentoAtivo:hover { color: var(--cs-grafite); border-color: var(--cs-dourado); }
+
+.segmentoTag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.segmentoNovo {
+  color: var(--cs-dourado);
+  background: transparent;
+  border: 1px dashed rgba(194, 160, 99, 0.5);
+}
+
+.segmentoNovo:hover { background: rgba(194, 160, 99, 0.08); }
+
+/* ── Árvore do DRE ── */
+.arvore {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.linha {
+  border: 1px solid var(--cs-linha);
+  border-radius: 14px;
+  background: rgba(244, 239, 227, 0.02);
+  padding: 16px 18px;
+}
+
+.linhaTopo {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sinal {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.sinalMais { color: #6fc2a3; background: rgba(28, 74, 61, 0.45); }
+.sinalMenos { color: var(--cs-champagne); background: rgba(244, 239, 227, 0.06); }
+
+.linhaTexto { flex: 1; min-width: 0; }
+
+.linhaRotulo {
+  margin: 0;
+  font-family: 'Sora', 'Hanken Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cs-marfim);
+}
+
+.linhaDescricao {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--cs-texto-2);
+}
+
+.linhaContagem {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--cs-texto-3);
+  padding-top: 3px;
+}
+
+.contas {
+  list-style: none;
+  margin: 12px 0 0 38px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.conta {
+  padding: 9px 0;
+  border-top: 1px solid var(--cs-linha);
+}
+
+.contaTopo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.contaNome {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cs-marfim);
+}
+
+.contaInativa .contaNome {
+  color: var(--cs-texto-3);
+  text-decoration: line-through;
+  text-decoration-color: rgba(244, 239, 227, 0.3);
+}
+
+.tagInativa {
+  margin-left: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cs-erro);
+  text-decoration: none;
+  display: inline-block;
+}
+
+.contaAcoes {
+  display: inline-flex;
+  gap: 14px;
+}
+
+.linkAcao {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--cs-dourado);
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+.linkAcao:hover { color: var(--cs-champagne); text-decoration: underline; }
+.linkAcao:disabled { opacity: 0.4; cursor: default; text-decoration: none; }
+
+.palavras {
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chip,
+.chipMais {
+  font-size: 11.5px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: var(--cs-texto-2);
+  background: rgba(244, 239, 227, 0.05);
+  border: 1px solid var(--cs-linha);
+}
+
+.chipMais { cursor: default; color: var(--cs-dourado); }
+
+.semPalavras {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--cs-texto-3);
+}
+
+.adicionar {
+  margin: 10px 0 0 38px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cs-dourado);
+  background: none;
+  border: 1px dashed rgba(194, 160, 99, 0.4);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.adicionar:hover { background: rgba(194, 160, 99, 0.07); }
+.adicionar:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Subtotais ── */
+.subtotal {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: rgba(194, 160, 99, 0.08);
+  border: 1px solid rgba(194, 160, 99, 0.28);
+}
+
+.subtotalIgual {
+  font-weight: 700;
+  color: var(--cs-dourado);
+}
+
+.subtotalRotulo {
+  font-family: 'Sora', 'Hanken Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cs-champagne);
+}
+
+.subtotalFormula {
+  font-size: 12.5px;
+  color: var(--cs-texto-2);
+}
+
+/* ── Formulários do ADM ── */
+.formulario,
+.formPalavras {
+  margin: 12px 0 0 38px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(194, 160, 99, 0.35);
+  background: rgba(194, 160, 99, 0.05);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.formPalavras { grid-template-columns: 1fr; margin-left: 0; margin-top: 8px; }
+
+.segmentos + .formulario { margin-left: 0; }
+
+.campoForm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cs-texto-2);
+}
+
+.campoForm input,
+.campoForm select,
+.campoForm textarea,
+.empresa select {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cs-marfim);
+  background: rgba(244, 239, 227, 0.04);
+  border: 1px solid rgba(244, 239, 227, 0.16);
+  border-radius: 9px;
+  padding: 9px 11px;
+  resize: vertical;
+}
+
+.campoForm select option,
+.empresa select option { color: #16140f; }
+
+.campoForm input:focus,
+.campoForm select:focus,
+.campoForm textarea:focus,
+.empresa select:focus {
+  outline: none;
+  border-color: rgba(194, 160, 99, 0.75);
+}
+
+.formAcoes {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btnPrimario {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cs-grafite);
+  background: var(--cs-dourado);
+  border: none;
+  border-radius: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+
+.btnPrimario:hover { background: var(--cs-champagne); }
+
+.erroForm {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 13px;
+  color: var(--cs-erro);
+}
+
+/* ── Segmento das empresas ── */
+.empresas {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.empresa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--cs-linha);
+}
+
+.empresaNome {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cs-marfim);
+}
+
+.empresaCnpj {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--cs-texto-3);
+}
+
+.empresa select { min-width: 200px; }
+.empresa select:disabled { opacity: 0.55; }
+
+.segmento:focus-visible,
+.segmentoNovo:focus-visible,
+.linkAcao:focus-visible,
+.adicionar:focus-visible,
+.btnPrimario:focus-visible {
+  outline: 2px solid var(--cs-dourado);
+  outline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+  .linha { padding: 14px; }
+  .contas, .adicionar, .formulario { margin-left: 0; }
+  .formulario { grid-template-columns: 1fr; }
+  .empresa { flex-direction: column; align-items: stretch; gap: 8px; }
+  .empresa select { min-width: 0; }
+}

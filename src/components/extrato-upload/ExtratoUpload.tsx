@@ -40,7 +40,7 @@ interface LinhaClassificada extends LinhaExtrato {
   /** true quando sugestaoIA é um nome válido do plano de contas e pode ser aplicado com 1 clique */
   sugestaoIAValida?: boolean
   /** origem da classificação atual */
-  fonte?: 'ia' | 'historico' | 'arquivo'
+  fonte?: 'ia' | 'historico' | 'arquivo' | 'estrutura'
 }
 
 type Fase = 'idle' | 'processando' | 'revisao' | 'salvando' | 'concluido'
@@ -900,6 +900,8 @@ interface LancamentoRowProps {
   onGrupoChange: (i: number, grupo: string) => void
   onAplicarSugestao: (i: number) => void
   onRemover: (i: number) => void
+  /** Estrutura do DRE em vigor: o grupo vem da conta e não pode ser escolhido. */
+  grupoTravado?: boolean
   styles: Record<string, string>
 }
 
@@ -914,6 +916,7 @@ const LancamentoRow = memo(function LancamentoRow({
   onGrupoChange,
   onAplicarSugestao,
   onRemover,
+  grupoTravado = false,
   styles,
 }: LancamentoRowProps) {
   const pct = totalReceitasOp > 0 ? (l.valor / totalReceitasOp) * 100 : null
@@ -970,14 +973,17 @@ const LancamentoRow = memo(function LancamentoRow({
         {l.sugerida && l.sugestaoIA && l.sugestaoIAValida && (
           <div
             className={styles.badgeSugestaoIA}
-            title={`Sugestão da IA: clique para aplicar "${l.sugestaoIA}"`}
+            title={`${l.fonte === 'estrutura' ? 'Reconhecido pelas palavras-chave da estrutura do DRE' : 'Sugestão da IA'}: clique para aplicar "${l.sugestaoIA}"`}
             onClick={e => { e.stopPropagation(); onAplicarSugestao(i) }}
           >
-            <span className={styles.badgeFonteLabel}>IA</span> {l.sugestaoIA}
+            <span className={styles.badgeFonteLabel}>{l.fonte === 'estrutura' ? 'Estrutura' : 'IA'}</span> {l.sugestaoIA}
           </div>
         )}
       </td>
       <td className={styles.tdGrupo} onClick={e => e.stopPropagation()}>
+        {grupoTravado ? (
+          <span title="Definido pela conta, conforme a estrutura do DRE">{l.grupo || '—'}</span>
+        ) : (
         <select
           className={styles.selectClf}
           value={l.grupo}
@@ -991,6 +997,7 @@ const LancamentoRow = memo(function LancamentoRow({
             <option value={l.grupo}>{l.grupo}</option>
           )}
         </select>
+        )}
       </td>
       <td className={`${styles.tdValor} ${l.tipo === 'receita' ? styles.tdReceita : styles.tdDespesa}`}>
         {moeda(l.valor)}
@@ -1018,9 +1025,13 @@ interface ExtratoUploadProps {
   onSaved?: () => void
   /** Fechar o modal pai */
   onClose?: () => void
+  /** Contas da estrutura do DRE da empresa. Sem isso, usa o plano de contas antigo do banco. */
+  catalogo?: { nome: string; tipo: 'receita' | 'despesa'; grupo: string }[]
+  /** Reconhece a conta pelas palavras-chave da estrutura (nome da conta ou null). */
+  reconhecer?: (descricao: string, tipo: 'receita' | 'despesa') => string | null
 }
 
-export function ExtratoUpload({ empresaId, onSaved, onClose }: ExtratoUploadProps) {
+export function ExtratoUpload({ empresaId, onSaved, onClose, catalogo, reconhecer }: ExtratoUploadProps) {
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Contexto salvo para execução manual da IA (Passo 2)
@@ -1038,7 +1049,7 @@ export function ExtratoUpload({ empresaId, onSaved, onClose }: ExtratoUploadProp
   const [fase, setFase]                             = useState<Fase>('idle')
   const [linhasClass, setLinhasClass]               = useState<LinhaClassificada[]>([])
   const [selecionados, setSelecionados]             = useState<Set<number>>(new Set())
-  const [filtroFonte, setFiltroFonte]               = useState<'total' | 'ia' | 'historico' | 'arquivo' | 'naoId' | 'pendente' | 'erro' | null>(null)
+  const [filtroFonte, setFiltroFonte]               = useState<'total' | 'ia' | 'estrutura' | 'historico' | 'arquivo' | 'naoId' | 'pendente' | 'erro' | null>(null)
   const [erroSalvar, setErroSalvar]                 = useToastErrorState()
   const [sucessoSalvo, setSucessoSalvo]             = useState(0)
   const [msgErroUpload, setMsgErroUpload]           = useToastErrorState()
@@ -1061,6 +1072,7 @@ export function ExtratoUpload({ empresaId, onSaved, onClose }: ExtratoUploadProp
     const indices = linhasClass.map((_, i) => i)
     if (!filtroFonte || filtroFonte === 'total') return indices
     if (filtroFonte === 'ia')        return indices.filter(i => linhasClass[i].fonte === 'ia')
+    if (filtroFonte === 'estrutura') return indices.filter(i => linhasClass[i].fonte === 'estrutura')
     if (filtroFonte === 'historico') return indices.filter(i => linhasClass[i].fonte === 'historico')
     if (filtroFonte === 'arquivo')   return indices.filter(i => linhasClass[i].fonte === 'arquivo')
     if (filtroFonte === 'naoId')     return indices.filter(i => linhasClass[i].sugerida && !linhasClass[i].sugestaoIAValida)
@@ -1315,10 +1327,14 @@ export function ExtratoUpload({ empresaId, onSaved, onClose }: ExtratoUploadProp
     setProgresso({ atual: 0, total: 4, label: 'Buscando plano de contas' })
 
     // Busca modelo e classificações em paralelo; histórico é paginado (sem limite server-side)
-    const [{ data: configData }, { data: classData }] = await Promise.all([
+    // Com a estrutura do DRE, as contas vêm dela; sem ela, do plano de contas antigo do banco.
+    const [{ data: configData }, classResp] = await Promise.all([
       supabase.from('configuracoes').select('valor').eq('chave', 'modelo_openai').single(),
-      supabase.from('dre_classificacoes').select('nome, tipo, grupo:dre_grupos!grupo_id(nome)').or('ativo.is.null,ativo.eq.true'),
+      catalogo
+        ? null
+        : supabase.from('dre_classificacoes').select('nome, tipo, grupo:dre_grupos!grupo_id(nome)').or('ativo.is.null,ativo.eq.true'),
     ])
+    const classData = classResp?.data ?? null
 
     // Pagina o histórico para garantir que tudo é lido, independente do max_rows do Supabase
     setProgresso({ atual: 1, total: 4, label: 'Carregando histórico' })
@@ -1342,11 +1358,13 @@ export function ExtratoUpload({ empresaId, onSaved, onClose }: ExtratoUploadProp
     }
     const modelo = configData?.valor ?? DEFAULT_OPENAI_MODEL
     modeloIARef.current = modelo
-    const classificacoes = (classData ?? []).map((c: { nome: string; tipo: string; grupo?: { nome?: string } | null }) => ({
-      nome: c.nome,
-      tipo: c.tipo,
-      grupo: c.grupo?.nome ?? '',
-    }))
+    const classificacoes: { nome: string; tipo: string; grupo: string }[] = catalogo
+      ? catalogo.map(c => ({ nome: c.nome, tipo: c.tipo, grupo: c.grupo }))
+      : (classData ?? []).map((c: { nome: string; tipo: string; grupo?: { nome?: string } | null }) => ({
+          nome: c.nome,
+          tipo: c.tipo,
+          grupo: c.grupo?.nome ?? '',
+        }))
 
     // Mapa classificação → grupo a partir do banco (prioridade sobre hardcoded)
     const grupoFromDB = new Map(classificacoes.filter(c => c.grupo).map(c => [c.nome, c.grupo] as [string, string]))
@@ -1515,6 +1533,22 @@ export function ExtratoUpload({ empresaId, onSaved, onClose }: ExtratoUploadProp
           }
           continue
         }
+      }
+
+      // Prioridade 3: palavras-chave da estrutura do DRE — sugestão para confirmar, sem custo de IA
+      const nomeEstrutura = reconhecer?.(linha.descricao, linha.tipo)
+      if (nomeEstrutura && nomesOficiaisSet.has(nomeEstrutura)) {
+        classificadas[i] = {
+          ...linha,
+          classificacao: 'Não Identificado',
+          grupo: '',
+          status: 'ok',
+          sugerida: true,
+          sugestaoIA: nomeEstrutura,
+          sugestaoIAValida: true,
+          fonte: 'estrutura',
+        }
+        continue
       }
 
       // Não classificado localmente — marcado como pendente para IA
@@ -1701,7 +1735,7 @@ export function ExtratoUpload({ empresaId, onSaved, onClose }: ExtratoUploadProp
     iaContextRef.current = null
     setFase('revisao')
     setProgresso(null)
-  }, [empresaId])
+  }, [empresaId, catalogo, reconhecer])
 
   const salvarTudo = async () => {
     const naoClass = linhasClass.filter(l => l.sugerida)
@@ -1958,6 +1992,18 @@ export function ExtratoUpload({ empresaId, onSaved, onClose }: ExtratoUploadProp
                     <span className={styles.fonteCardLabel}>Classificados pela IA</span>
                   </button>
                 )}
+                {linhasClass.filter(l => l.fonte === 'estrutura').length > 0 && (
+                  <button
+                    className={`${styles.fonteCard} ${styles.fonteCardIA}${filtroFonte === 'estrutura' ? ` ${styles.fonteCardAtivo}` : ''}`}
+                    onClick={() => setFiltroFonte(filtroFonte === 'estrutura' ? null : 'estrutura')}
+                    title="Filtrar: reconhecidos pela estrutura do DRE"
+                  >
+                    <span className={styles.infoIcon}>ⓘ</span>
+                    <span className={styles.cardTooltip}>Aqui exibe os lançamentos reconhecidos pelas palavras-chave da estrutura do DRE da sua empresa, sem usar a IA. A estrutura é padronizada pelo administrador. Confirme cada sugestão (badge Estrutura) antes de salvar.</span>
+                    <span className={styles.fonteCardNum}>{linhasClass.filter(l => l.fonte === 'estrutura').length}</span>
+                    <span className={styles.fonteCardLabel}>Reconhecidos pela estrutura</span>
+                  </button>
+                )}
                 {linhasClass.filter(l => l.fonte === 'historico').length > 0 && (
                   <button
                     className={`${styles.fonteCard} ${styles.fonteCardHistorico}${filtroFonte === 'historico' ? ` ${styles.fonteCardAtivo}` : ''}`}
@@ -2001,10 +2047,10 @@ export function ExtratoUpload({ empresaId, onSaved, onClose }: ExtratoUploadProp
                     title="Filtrar: sugeridos pela IA aguardando confirmação"
                   >
                     <span className={styles.infoIcon}>ⓘ</span>
-                    <span className={styles.cardTooltip}>Aqui exibe os lançamentos que a IA identificou e sugeriu uma categoria válida do plano de contas — mas que ainda aguardam a sua confirmação. A IA sempre escolhe dentro do plano oficial, porém como pode errar na escolha, o sistema não aplica automaticamente: é você quem decide. Na tabela, cada uma dessas linhas exibe o badge laranja IA com a sugestão — clique nele para confirmar, ou selecione manualmente se preferir outra categoria.</span>
+                    <span className={styles.cardTooltip}>Aqui exibe os lançamentos com uma sugestão de categoria válida do plano de contas (pelas palavras-chave da estrutura do DRE ou pela IA) que ainda aguardam a sua confirmação. O sistema não aplica automaticamente: é você quem decide. Na tabela, cada linha exibe o badge com a sugestão (Estrutura ou IA) — clique nele para confirmar, ou selecione manualmente se preferir outra categoria.</span>
                     <span className={styles.fonteCardNum}>{linhasClass.filter(l => l.sugerida && l.sugestaoIAValida).length}</span>
                     <span className={styles.fonteCardLabel}>
-                      Sugeridos pela IA — aguardando confirmação
+                      Sugestões aguardando confirmação
                     </span>
                   </button>
                 )}
@@ -2103,6 +2149,7 @@ export function ExtratoUpload({ empresaId, onSaved, onClose }: ExtratoUploadProp
                     onGrupoChange={handleGrupoChange}
                     onAplicarSugestao={handleAplicarSugestao}
                     onRemover={removerLinha}
+                    grupoTravado={!!catalogo}
                     styles={styles}
                   />
                 ))}
