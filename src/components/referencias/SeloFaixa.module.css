@@ -1,0 +1,39 @@
+/* Selo de faixa: verde-azulado → amarelo → cinza → laranja. O nome da faixa
+   sempre aparece escrito; Na média só com contorno e Atenção com contorno forte
+   (para não depender só da cor). */
+
+.selo {
+  --faixa-ideal-cor:     #5cc8a8;
+  --faixa-ideal-fundo:   rgba(92, 200, 168, 0.14);
+  --faixa-aceitavel-cor: #e6c869;
+  --faixa-aceitavel-fundo: rgba(230, 200, 105, 0.14);
+  --faixa-media-cor:     #b5b0a3;
+  --faixa-atencao-cor:   #ef8a5e;
+  --faixa-atencao-fundo: rgba(236, 132, 88, 0.16);
+
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+:global(html[data-theme="light"]) .selo {
+  --faixa-ideal-cor:     #0f7a5f;
+  --faixa-ideal-fundo:   rgba(15, 122, 95, 0.1);
+  --faixa-aceitavel-cor: #8a6400;
+  --faixa-aceitavel-fundo: rgba(234, 179, 8, 0.16);
+  --faixa-media-cor:     #52525b;
+  --faixa-atencao-cor:   #b4471b;
+  --faixa-atencao-fundo: rgba(234, 88, 12, 0.12);
+}
+
+.faixa_ideal { color: var(--faixa-ideal-cor); background: var(--faixa-ideal-fundo); }
+.faixa_aceitavel { color: var(--faixa-aceitavel-cor); background: var(--faixa-aceitavel-fundo); }
+.faixa_media { color: var(--faixa-media-cor); background: transparent; box-shadow: inset 0 0 0 1px var(--faixa-media-cor); }
+.faixa_atencao { color: var(--faixa-atencao-cor); background: var(--faixa-atencao-fundo); box-shadow: inset 0 0 0 1.5px var(--faixa-atencao-cor); }

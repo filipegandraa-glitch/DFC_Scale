@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { primeiroNome as extrairPrimeiroNome } from '../lib/primeiroNome'
 import { supabase } from '../lib/supabase'
 import type { Empresa, EmpresaMembro, Profile } from '../lib/types'
 import {
@@ -14,15 +15,15 @@ import { useToastErrorState } from '../hooks/useToastErrorState'
 interface Props {
   /** Chamado quando o usuário seleciona (ou cria e seleciona) uma empresa */
   onSelecionar: (empresa: Empresa) => void
-  /** Voltar para a home */
-  onVoltar: () => void
-  /** Texto do botão de voltar (padrão: "Voltar") */
-  voltarLabel?: string
   /** Navegar para os termos de uso deste app */
   onVerTermos?: () => void
   contexto?: 'dre' | 'labs' | 'precificacao' | 'vendas'
   /** Nome do usuário logado, para a saudação */
   nomeUsuario?: string
+  /** E-mail do login, usado quando o cadastro não tem um nome de verdade */
+  emailUsuario?: string
+  /** Menu de perfil do canto superior direito (Referências do DRE e Sair) */
+  menuPerfil?: ReactNode
 }
 
 type EmpresaRoleMap = Record<string, EmpresaMembro['role']>
@@ -349,11 +350,11 @@ function ConfirmDeleteModal({
 
 export default function EmpresaGatePage({
   onSelecionar,
-  onVoltar,
-  voltarLabel = 'Voltar',
   onVerTermos,
   contexto = 'dre',
   nomeUsuario,
+  emailUsuario,
+  menuPerfil,
 }: Props) {
   const [tipoUsuario, setTipoUsuario]     = useState<'titular' | 'colaborador'>('titular')
   const [empresas, setEmpresas]           = useState<EmpresaCard[]>([])
@@ -767,7 +768,7 @@ export default function EmpresaGatePage({
 
   const temEmpresas = empresas.length > 0
   const mostrarBusca = empresas.length > LIMITE_SEM_BUSCA
-  const primeiroNome = nomeUsuario?.trim().split(/\s+/)[0]
+  const primeiroNome = extrairPrimeiroNome(nomeUsuario, emailUsuario)
 
   const selecionar = (empresa: Empresa) => {
     lembrarUltimaEmpresa(empresa.id)
@@ -781,9 +782,7 @@ export default function EmpresaGatePage({
           <img src="/symbol-gold.svg" alt="" className={styles.simbolo} />
           <span>DFC <strong>Scale</strong></span>
         </span>
-        <button type="button" className={styles.btnSair} onClick={onVoltar}>
-          {voltarLabel}
-        </button>
+        <div className={styles.topoAcoes}>{menuPerfil}</div>
       </header>
 
       <main className={styles.conteudo}>

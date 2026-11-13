@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { ErrorBoundary } from './ErrorBoundary'
+import { MenuPerfil } from './components/perfil/MenuPerfil'
+import { enviarBoasVindas } from './lib/boasVindas'
 import { supabase } from './lib/supabase'
 import type { Empresa } from './lib/types'
 import AcceptInvitePage from './pages/AcceptInvitePage'
@@ -8,15 +10,18 @@ import AnaliseDrePage from './pages/AnaliseDrePage'
 import EmpresaGatePage from './pages/EmpresaGatePage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import PerfilAdminPage from './pages/PerfilAdminPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import TermosPage from './pages/TermosPage'
 
 // DFC Scale: fork do PainelGestaa com apenas a Análise DFC.
 // Rotas: '/' (landing sem login, DFC com login), '/entrar' (login),
-// '/termos' (termos de uso) e '/reset-password'.
+// '/termos' (termos de uso), '/reset-password' e '/referencias' (Referências
+// do DRE, aberta pelo menu de perfil: todos consultam, só profiles.role = 'admin' edita).
 const DFC_PATH = '/'
 const ENTRAR_PATH = '/entrar'
 const TERMOS_PATH = '/termos'
+const REFERENCIAS_PATH = '/referencias'
 // Caminho do app DFC no cadastro de apps do PainelGestaa (tabela `apps`),
 // usado para respeitar a liberação de acesso feita pelo admin.
 const DFC_INTERNAL_LINK = '/analise-dre'
@@ -25,6 +30,7 @@ const EMPRESA_STORAGE_KEY = 'empresa_selecionada'
 export interface User {
   name: string
   email: string
+  tipoUsuario: 'titular' | 'colaborador' | null
 }
 
 async function sessionToUser(session: Session): Promise<User> {
@@ -36,16 +42,25 @@ async function sessionToUser(session: Session): Promise<User> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('name')
+    .select('name, tipo_usuario')
     .eq('id', session.user.id)
     .maybeSingle()
 
   const name = profile?.name?.trim() || fallbackName
-  return { name, email }
+  const tipo = profile?.tipo_usuario
+  const tipoUsuario = tipo === 'titular' || tipo === 'colaborador' ? tipo : null
+  return { name, email, tipoUsuario }
+}
+
+function rotuloCargo(admin: boolean, tipo: User['tipoUsuario']) {
+  if (admin) return 'Administrador'
+  if (tipo === 'colaborador') return 'Colaborador'
+  if (tipo === 'titular') return 'Titular'
+  return 'Usuário'
 }
 
 async function carregarAcessoUsuario(session: Session) {
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role, ativo, app_access_ids')
     .eq('id', session.user.id)
@@ -53,15 +68,19 @@ async function carregarAcessoUsuario(session: Session) {
 
   if (profile?.role !== 'admin' && profile?.ativo === false) {
     await supabase.auth.signOut()
-    return { permitido: false, temAcessoDfc: false }
+    return { permitido: false, temAcessoDfc: false, admin: false }
   }
 
-  if (profile?.role === 'admin' || profile?.app_access_ids == null) {
-    return { permitido: true, temAcessoDfc: true }
+  // Cargo de ADM (o mesmo do PainelGestaa): libera a edição das Referências do DRE.
+  // null = não deu para ler agora (falha de rede): mantém o que já se sabia.
+  const admin: boolean | null = profileError ? null : profile?.role === 'admin'
+
+  if (admin || profile?.app_access_ids == null) {
+    return { permitido: true, temAcessoDfc: true, admin }
   }
 
   if (profile.app_access_ids.length === 0) {
-    return { permitido: true, temAcessoDfc: false }
+    return { permitido: true, temAcessoDfc: false, admin }
   }
 
   const { data: apps, error: appsError } = await supabase
@@ -70,7 +89,7 @@ async function carregarAcessoUsuario(session: Session) {
     .in('id', profile.app_access_ids)
 
   if (appsError) {
-    return { permitido: true, temAcessoDfc: true }
+    return { permitido: true, temAcessoDfc: true, admin }
   }
 
   const temAcessoDfc = (apps ?? []).some(app => {
@@ -79,7 +98,7 @@ async function carregarAcessoUsuario(session: Session) {
     return (link.startsWith('/') ? link : '/' + link) === DFC_INTERNAL_LINK
   })
 
-  return { permitido: true, temAcessoDfc }
+  return { permitido: true, temAcessoDfc, admin }
 }
 
 function restaurarEmpresa() {
@@ -142,6 +161,7 @@ function App() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [termosAceitos, setTermosAceitos] = useState<boolean | null>(null)
   const [temAcessoDfc, setTemAcessoDfc] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(restaurarEmpresa)
 
   useEffect(() => {
@@ -182,6 +202,7 @@ function App() {
         setUserId(null)
         setTermosAceitos(null)
         setTemAcessoDfc(true)
+        setIsAdmin(false)
         setIsInviteFlow(false)
         setIsRecoveryFlow(false)
         return
@@ -193,12 +214,14 @@ function App() {
         setUserId(null)
         setTermosAceitos(null)
         setTemAcessoDfc(true)
+        setIsAdmin(false)
         return
       }
 
       setUser(await sessionToUser(session))
       setUserId(session.user.id)
       setTemAcessoDfc(acesso.temAcessoDfc)
+      if (acesso.admin !== null) setIsAdmin(acesso.admin)
       if (session.user.email && window.location.hash.includes('type=invite')) {
         setIsInviteFlow(true)
         setInviteEmail(session.user.email)
@@ -243,8 +266,22 @@ function App() {
     }
   }, [user, pathname])
 
+  // Sair das Referências do DRE com alterações não salvas (Voltar do navegador ou menu de perfil).
+  const guardaSaidaRef = useRef<(() => boolean) | null>(null)
+  const registrarGuardaSaida = useCallback((guarda: (() => boolean) | null) => {
+    guardaSaidaRef.current = guarda
+  }, [])
+  const podeSairDaTela = () => !guardaSaidaRef.current || guardaSaidaRef.current()
+
   useEffect(() => {
-    const onPopState = () => setPathname(window.location.pathname)
+    const onPopState = () => {
+      const guarda = guardaSaidaRef.current
+      if (guarda && window.location.pathname !== REFERENCIAS_PATH && !guarda()) {
+        window.history.pushState({}, '', REFERENCIAS_PATH)
+        return
+      }
+      setPathname(window.location.pathname)
+    }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
@@ -255,9 +292,16 @@ function App() {
     await supabase.auth.signOut()
     setTermosAceitos(null)
     setUserId(null)
+    setIsAdmin(false)
     window.history.replaceState({}, '', DFC_PATH)
     setPathname(DFC_PATH)
   }
+
+  const abrirReferencias = useCallback(() => {
+    if (window.location.pathname === REFERENCIAS_PATH) return
+    window.history.pushState({}, '', REFERENCIAS_PATH)
+    setPathname(REFERENCIAS_PATH)
+  }, [])
 
   const selecionarEmpresa = (emp: Empresa) => {
     localStorage.setItem(EMPRESA_STORAGE_KEY, JSON.stringify(emp))
@@ -338,9 +382,37 @@ function App() {
           userId={userId!}
           userName={user.name}
           onAceitar={() => {
+            // Primeiro acesso ao DFC: dispara o e-mail de boas-vindas (a função ignora quem já tinha aceitado).
+            if (termosAceitos === false) enviarBoasVindas()
             setTermosAceitos(true)
             navigate(DFC_PATH)
           }}
+        />
+      </ErrorBoundary>
+    )
+  }
+
+  const menuPerfil = (
+    <MenuPerfil
+      nome={user.name}
+      email={user.email}
+      cargo={rotuloCargo(isAdmin, user.tipoUsuario)}
+      podeEditarReferencias={isAdmin}
+      onAbrirReferencias={abrirReferencias}
+      onSair={() => { if (podeSairDaTela()) void handleLogout() }}
+    />
+  )
+
+  // Referências do DRE: todos consultam; só o ADM edita (o RLS também barra a gravação).
+  if (pathname === REFERENCIAS_PATH) {
+    return (
+      <ErrorBoundary>
+        <PerfilAdminPage
+          podeEditar={isAdmin}
+          nomeUsuario={user.name}
+          menuPerfil={menuPerfil}
+          onVoltar={() => navigate(DFC_PATH)}
+          registrarGuardaSaida={registrarGuardaSaida}
         />
       </ErrorBoundary>
     )
@@ -355,10 +427,10 @@ function App() {
       <ErrorBoundary>
         <EmpresaGatePage
           onSelecionar={selecionarEmpresa}
-          onVoltar={handleLogout}
-          voltarLabel="Sair"
           onVerTermos={() => navigate(TERMOS_PATH)}
           nomeUsuario={user.name}
+          emailUsuario={user.email}
+          menuPerfil={menuPerfil}
         />
       </ErrorBoundary>
     )
@@ -369,8 +441,7 @@ function App() {
       <AnaliseDrePage
         empresa={empresaSelecionada}
         onTrocarEmpresa={trocarEmpresa}
-        onVoltar={handleLogout}
-        voltarLabel="Sair"
+        menuPerfil={menuPerfil}
       />
     </ErrorBoundary>
   )

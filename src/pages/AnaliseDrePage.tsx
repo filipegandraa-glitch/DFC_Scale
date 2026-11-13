@@ -10,7 +10,9 @@ import { useBackdropDismiss } from '../hooks/useBackdropDismiss'
 import { useSessionStorageState } from '../hooks/useSessionStorageState'
 import ModalTransition from '../components/ModalTransition'
 import { TourBoasVindas, useTourBoasVindas } from '../components/tour/TourBoasVindas'
+import { SeloFaixa } from '../components/referencias/SeloFaixa'
 import { useToastErrorState } from '../hooks/useToastErrorState'
+import { arredondar, classificarFaixa, resumoDasFaixas, LINHAS_REFERENCIA, useReferenciasDre } from '../lib/referenciasDre'
 import { toast } from '../lib/toast'
 
 type DreGrupo = Database['public']['Tables']['dre_grupos']['Row']
@@ -247,22 +249,27 @@ function StatCard({ title, value, hint, tone = 'default', children }: {
   )
 }
 
-function KpiCard({ title, value, secondaryValue, hint, tone = 'default' }: {
+function KpiCard({ title, value, secondaryValue, hint, tone = 'default', selo }: {
   title: string
   value: string
   secondaryValue?: string
   hint: string
   tone?: 'default' | 'positive' | 'negative' | 'neutral'
+  /** Faixa das Referências do DRE (ex.: Margem de Contribuição). */
+  selo?: ReactNode
 }) {
   return (
     <article className={`${styles.kpiCard} ${tone === 'positive' ? styles.kpiPositive : ''} ${tone === 'negative' ? styles.kpiNegative : ''} ${tone === 'neutral' ? styles.kpiNeutral : ''}`}>
       <span className={styles.kpiTitle}>{title}</span>
       <strong className={styles.kpiValue}>{value}</strong>
       {secondaryValue && <span className={styles.kpiSecondaryValue}>{secondaryValue}</span>}
+      {selo}
       <p className={styles.kpiHint}>{hint}</p>
     </article>
   )
 }
+
+const DEF_MARGEM = LINHAS_REFERENCIA.find(d => d.id === 'margem_contribuicao')!
 
 const STEP_LABELS: Record<Step, string> = {
   1: 'Tipo', 2: 'Data', 3: 'Descrição', 4: 'Valor', 5: 'Classificação', 6: 'Grupo',
@@ -316,12 +323,11 @@ type DreListItem =
 interface AnaliseDreProps {
   empresa: Empresa
   onTrocarEmpresa: () => void
-  onVoltar: () => void
-  /** Texto do botão de voltar (padrão: "Voltar ao dashboard") */
-  voltarLabel?: string
+  /** Menu de perfil do canto superior direito (Referências do DRE e Sair). */
+  menuPerfil?: ReactNode
 }
 
-export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, voltarLabel = 'Voltar ao dashboard' }: AnaliseDreProps) {
+export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil }: AnaliseDreProps) {
   const storagePrefix = `dre:${empresa.id}`
   const [showWizard,     setShowWizard]     = useState(false)
   const [editingId,      setEditingId]      = useState<string | null>(null)
@@ -352,6 +358,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
   )
   const [showAssistente,   setShowAssistente]   = useState(false)
   const tour = useTourBoasVindas()
+  const { referencias, carregado: referenciasCarregadas } = useReferenciasDre()
   const [showUpload,       setShowUpload]       = useState(false)
   const [showExportModal,  setShowExportModal]  = useState(false)
   const [exportando,       setExportando]       = useState(false)
@@ -829,6 +836,14 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
       }
     })
   }, [mesesFiltro, mesesOptions, lancamentos, anoFiltro, tipoMap])
+
+  // Selo no card de Margem: só quando os cards mostram o período inteiro (sem filtro de tipo/busca).
+  const faixaMargem = referenciasCarregadas
+    && tipoFiltro === 'todos'
+    && !buscaLancamento.trim()
+    && kpis.receitaOperacional > 0
+    ? classificarFaixa(arredondar(kpis.margemContribPct, 1), referencias.margem_contribuicao, DEF_MARGEM.sentido)
+    : null
 
   const toggleGrupo = (key: string) => setExpandedGrupos(prev => {
     const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n
@@ -1431,8 +1446,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
 
       <header className={styles.header}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <button onClick={onVoltar} className={styles.backLink} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>← {voltarLabel}</button>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
             <button onClick={onTrocarEmpresa} className={styles.btnTrocarEmpresa}>
               Trocar empresa
             </button>
@@ -1446,7 +1460,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
             {empresa.cnpj ? ` · ${empresa.cnpj}` : ''} — Acompanhe receitas, despesas e o resultado do período.
           </p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
           <button className={styles.btnAssistente} onClick={() => setShowAssistente(true)}>
             <span className={styles.btnAssistenteInfo}>ⓘ</span>
             <span className={styles.btnAssistenteTooltip}>Abre o Assistente de DFC — uma IA treinada para analisar seus lançamentos e responder perguntas como "qual meu maior custo?", "como está minha margem?" ou "onde posso reduzir despesas?". Powered by OpenAI.</span>
@@ -1469,6 +1483,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
             <span className={styles.btnExportEyebrow}>• RELATÓRIO</span>
             <span className={styles.btnExportTitle}>Exportar Relatório</span>
           </button>
+          {menuPerfil}
         </div>
       </header>
 
@@ -1519,10 +1534,18 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
             />
             <KpiCard
               title="Margem de Contribuição"
-              value={pct(kpis.margemContribPct)}
+              value={pct(arredondar(kpis.margemContribPct, 1))}
               secondaryValue={moeda(kpis.margemContrib)}
               hint="Receita Líquida menos custos diretos de entrega (materiais, insumos, serviços operacionais)."
-              tone={kpiTone(kpis.margemContribPct)}
+              tone={faixaMargem
+                ? (faixaMargem === 'atencao' ? 'negative' : faixaMargem === 'media' ? 'neutral' : 'positive')
+                : kpiTone(kpis.margemContribPct)}
+              selo={faixaMargem && (
+                <SeloFaixa
+                  faixa={faixaMargem}
+                  dica={`Referência do método: ${resumoDasFaixas(DEF_MARGEM, referencias.margem_contribuicao)}`}
+                />
+              )}
             />
             <KpiCard
               title="EBITDA"
@@ -1552,6 +1575,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, onVoltar, vol
         </section>
       )}
 
+      {/* ── Referências do DRE (faixas definidas pelo ADM) ── */}
       {/* ── Modal Exportar Relatório ── */}
       <ModalTransition open={showExportModal}>
         {showExportModal && (

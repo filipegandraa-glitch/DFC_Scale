@@ -17,10 +17,11 @@ export function notifyToast(
   type: ToastType = 'info',
   options?: { duration?: number; fallback?: string },
 ) {
-  const translatedMessage = translateFunctionErrorMessage(
-    message,
-    options?.fallback ?? 'Não foi possível concluir a operação.',
-  )
+  // Só erros/avisos passam pelo tradutor (ele troca texto não reconhecido pelo
+  // fallback de erro). Sucesso e info são textos nossos: vão como estão.
+  const translatedMessage = type === 'error' || type === 'warning'
+    ? translateFunctionErrorMessage(message, options?.fallback ?? 'Não foi possível concluir a operação.')
+    : String(message ?? '').trim() || 'Pronto.'
 
   const notification: ToastNotification = {
     id: ++nextToastId,

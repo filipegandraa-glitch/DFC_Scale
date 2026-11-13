@@ -1,0 +1,188 @@
+/* Menu de perfil: gatilho em pílula + cartão marfim (como na Precificação Scale). */
+
+.raiz {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  --mp-marfim: #f4efe3;
+  --mp-marfim-hover: #ebe4d3;
+  --mp-tinta: #1c1a16;
+  --mp-tinta-2: #5f5a4e;
+  --mp-dourado: #84621d;
+  --mp-linha: rgba(28, 26, 22, 0.1);
+}
+
+.gatilho {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 240px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #ece6d6;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(244, 239, 227, 0.18);
+  border-radius: 999px;
+  padding: 9px 14px 9px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.gatilho:hover,
+.gatilhoAberto {
+  border-color: rgba(244, 239, 227, 0.38);
+  background: rgba(244, 239, 227, 0.05);
+}
+
+.gatilho:focus-visible,
+.item:focus-visible {
+  outline: 2px solid #c2a063;
+  outline-offset: 2px;
+}
+
+.ponto {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #c2a063;
+  flex-shrink: 0;
+}
+
+.apelido {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seta {
+  flex-shrink: 0;
+  opacity: 0.75;
+  transition: transform 0.15s;
+}
+
+.gatilhoAberto .seta { transform: rotate(180deg); }
+
+:global(html[data-theme="light"]) .gatilho {
+  color: var(--text);
+  background: var(--bg-surface);
+  border-color: var(--border);
+}
+
+:global(html[data-theme="light"]) .gatilho:hover,
+:global(html[data-theme="light"]) .gatilhoAberto {
+  border-color: var(--border-gold);
+}
+
+/* ── Cartão ── */
+.menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 60;
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--mp-marfim);
+  color: var(--mp-tinta);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(28, 26, 22, 0.06);
+  text-align: left;
+  animation: aparecer 0.14s ease-out;
+}
+
+:global(html[data-theme="light"]) .menu {
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(28, 26, 22, 0.1);
+}
+
+@keyframes aparecer {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.cabecalho {
+  padding: 12px 14px 10px;
+  min-width: 0;
+}
+
+.nome,
+.email,
+.cargo {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nome {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.email {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--mp-tinta-2);
+}
+
+.cargo {
+  margin-top: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--mp-dourado);
+}
+
+.divisor {
+  border: none;
+  border-top: 1px solid var(--mp-linha);
+  margin: 6px 6px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  font: inherit;
+  font-size: 15px;
+  color: #3a372f;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--mp-marfim-hover);
+  color: var(--mp-tinta);
+}
+
+.icone {
+  flex-shrink: 0;
+  color: var(--mp-tinta-2);
+}
+
+.itemTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemDetalhe {
+  font-size: 12px;
+  color: var(--mp-tinta-2);
+}
+
+@media (max-width: 520px) {
+  .gatilho { max-width: 170px; padding: 8px 12px 8px 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu { animation: none; }
+  .seta { transition: none; }
+}
