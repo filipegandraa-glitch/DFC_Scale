@@ -117,12 +117,12 @@ function Carregando() {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      height: '100vh', background: '#080808',
+      height: '100vh', background: '#16140f',
     }}>
       <div style={{
         width: 28, height: 28,
-        border: '3px solid #1e1e1e',
-        borderTopColor: '#c9a22a',
+        border: '3px solid rgba(194, 160, 99, 0.18)',
+        borderTopColor: '#c2a063',
         borderRadius: '50%',
         animation: 'spin 0.7s linear infinite',
       }} />
@@ -135,21 +135,38 @@ function SemAcesso({ onLogout }: { onLogout: () => void }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      gap: 16, height: '100vh', background: '#080808', color: '#e8e8e8', padding: 24, textAlign: 'center',
+      gap: 28, minHeight: '100vh', boxSizing: 'border-box', padding: '48px 16px',
+      background: 'radial-gradient(ellipse 70% 55% at 50% -5%, rgba(194, 160, 99, 0.18) 0%, rgba(194, 160, 99, 0) 70%), #16140f',
+      color: '#16140f', fontFamily: "'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif",
     }}>
-      <h1 style={{ fontSize: 22, margin: 0 }}>Acesso à Análise DFC não liberado</h1>
-      <p style={{ color: '#9a9a9a', maxWidth: 420, margin: 0 }}>
-        Sua conta não tem permissão para usar a Análise DFC. Peça ao administrador para liberar o acesso.
-      </p>
-      <button
-        onClick={onLogout}
-        style={{
-          background: '#c9a22a', color: '#080808', border: 'none', borderRadius: 8,
-          padding: '10px 20px', fontWeight: 600, cursor: 'pointer',
-        }}
-      >
-        Sair
-      </button>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 17, color: '#f4efe3' }}>
+        <img src="/symbol-gold.svg" alt="" width={22} height={22} style={{ display: 'block' }} />
+        <span>DFC <b style={{ fontWeight: 700 }}>Scale</b></span>
+      </span>
+      <div style={{
+        width: '100%', maxWidth: 460, boxSizing: 'border-box', padding: 32,
+        background: '#f2eee3', borderRadius: 16, boxShadow: '0 24px 64px rgba(0, 0, 0, 0.45)',
+        display: 'flex', flexDirection: 'column', gap: 12,
+      }}>
+        <h1 style={{
+          margin: 0, fontFamily: "'Sora', 'Hanken Grotesk', system-ui, sans-serif",
+          fontSize: 26, fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.025em', color: '#16140f',
+        }}>
+          Acesso à Análise DFC não liberado
+        </h1>
+        <p style={{ margin: '0 0 12px', fontSize: 15, lineHeight: 1.55, color: '#5f5a4e' }}>
+          Sua conta não tem permissão para usar a Análise DFC. Peça ao administrador para liberar o acesso.
+        </p>
+        <button
+          onClick={onLogout}
+          style={{
+            width: '100%', background: '#16140f', color: '#f4efe3', border: '1px solid #16140f', borderRadius: 10,
+            padding: '13px 18px', font: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          Sair
+        </button>
+      </div>
     </div>
   )
 }

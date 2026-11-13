@@ -127,10 +127,12 @@ export default function ResetPasswordPage({
 
   return (
     <div className={styles.container}>
+      <div className={styles.marca}>
+        <img src="/symbol-gold.svg" alt="" width={22} height={22} />
+        <span>DFC <b>Scale</b></span>
+      </div>
+
       <div className={styles.card}>
-        <div className={styles.logo}>
-          <img src="/logo.png" height="34" alt="PainelGestaa" className={styles.logoImg} />
-        </div>
 
         {success
           ? renderSuccessState()

@@ -69,12 +69,13 @@ export default function AcceptInvitePage({ email, onSuccess }: AcceptInvitePageP
 
   return (
     <div className={styles.container}>
-      <div className={styles.card}>
-        {/* Logo */}
-        <div className={styles.logo}>
-          <img src="/logo.png" height="34" alt="PainelGestaa" className={styles.logoImg} />
-        </div>
+      {/* Marca */}
+      <div className={styles.marca}>
+        <img src="/symbol-gold.svg" alt="" width={22} height={22} />
+        <span>DFC <b>Scale</b></span>
+      </div>
 
+      <div className={styles.card}>
         {/* Header */}
         <div className={styles.formHeader}>
           <h1 className={styles.title}>Complete seu cadastro</h1>
@@ -82,7 +83,7 @@ export default function AcceptInvitePage({ email, onSuccess }: AcceptInvitePageP
         </div>
 
         {/* E-mail (somente leitura) */}
-        <div className={styles.form} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className={styles.form}>
           <div className={styles.fieldGroup}>
             <label className={styles.label}>E-mail</label>
             <div className={styles.inputWrapper}>
@@ -95,7 +96,7 @@ export default function AcceptInvitePage({ email, onSuccess }: AcceptInvitePageP
                 className={styles.input}
                 value={email}
                 readOnly
-                style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                style={{ cursor: 'not-allowed' }}
               />
             </div>
           </div>

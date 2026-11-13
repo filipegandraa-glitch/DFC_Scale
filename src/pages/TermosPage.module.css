@@ -1,0 +1,406 @@
+/* Termos de uso — faixa escura (marca + chamada) e corpo marfim com o texto
+   dos termos num cartão branco rolável. Mesmo sistema visual da Análise DFC. */
+
+.page {
+  position: relative;
+  min-height: 100vh;
+  background: #f2eee3;
+  color: #16140f;
+  font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif;
+  overflow-x: clip;
+}
+
+.page :where(input, button) {
+  font: inherit;
+}
+
+.conteudo {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ── Faixa escura ── */
+
+.faixa {
+  position: relative;
+  z-index: 3;
+  background: #16140f;
+  color: #f4efe3;
+}
+
+/* O brilho dourado tem recorte próprio: a faixa não usa overflow hidden. */
+.faixaGlow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.faixaGlow::before {
+  content: '';
+  position: absolute;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(194, 160, 99, 0.16) 0%, rgba(194, 160, 99, 0) 70%);
+  top: -220px;
+  right: -140px;
+}
+
+.faixa .conteudo {
+  padding-top: 14px;
+  padding-bottom: 26px;
+}
+
+.faixa :where(button, a, [tabindex]):focus-visible {
+  outline: 2px solid #c2a063;
+  outline-offset: 2px;
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  min-height: 52px;
+}
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  color: #f4efe3;
+  white-space: nowrap;
+}
+.marca img { display: block; }
+.marca b { font-weight: 700; }
+
+.eyebrow {
+  margin: 30px 0 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #c2a063;
+  overflow-wrap: anywhere;
+}
+
+.titulo {
+  margin: 0;
+  max-width: 760px;
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 46px;
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+  color: #e8d9b5;
+  text-wrap: balance;
+}
+
+.apoio {
+  margin: 16px 0 0;
+  max-width: 640px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: rgba(244, 239, 227, 0.72);
+}
+
+/* ── Corpo marfim ── */
+
+.corpo {
+  background: #f2eee3;
+  color: #16140f;
+}
+
+.corpo > .conteudo {
+  padding-top: 28px;
+  padding-bottom: 56px;
+}
+
+.corpo :where(button, a, input, [tabindex]):focus-visible {
+  outline: 2px solid #16140f;
+  outline-offset: 2px;
+}
+
+.coluna {
+  max-width: 880px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Avisos (aceite registrado / instrução de leitura) */
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid;
+  border-left-width: 3px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.aviso svg { flex-shrink: 0; margin-top: 2px; }
+.aviso strong { font-weight: 700; }
+
+.avisoSucesso {
+  background: #e6f0ea;
+  border-color: #bcd6c8;
+  border-left-color: #1c4a3d;
+  color: #1c4a3d;
+}
+
+.avisoInfo {
+  background: #e2eef1;
+  border-color: #bfd7de;
+  border-left-color: #2e5a66;
+  color: #2e5a66;
+}
+
+/* Cartão branco rolável com o texto dos termos */
+.documento {
+  max-height: clamp(320px, 62vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Barra de rolagem clara (a global do app é escura, feita para fundo preto). */
+  scrollbar-width: thin;
+  scrollbar-color: #cfc6b3 transparent;
+  background: #ffffff;
+  border: 1px solid #e3dccb;
+  border-radius: 14px;
+  padding: 28px 32px;
+  color: #16140f;
+  font-size: 14px;
+  line-height: 1.75;
+  box-shadow: 0 1px 2px rgba(22, 20, 15, 0.04);
+}
+
+/* Rodapé: aceite, erro e botão */
+.rodape {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.aceite {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #e3dccb;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.aceiteFixo { cursor: default; }
+.aceiteBloqueado {
+  cursor: not-allowed;
+  background: #f7f4ec;
+}
+.aceiteBloqueado .aceiteTexto { color: #5f5a4e; }
+
+.aceite input {
+  margin: 3px 0 0;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #16140f;
+  cursor: inherit;
+}
+
+.aceiteTexto {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #16140f;
+}
+
+.erro {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #e5c3bc;
+  background: #f8e7e3;
+  color: #9a3b2c;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.botao {
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid #16140f;
+  border-radius: 10px;
+  background: #16140f;
+  color: #f4efe3;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.botao:hover:not(:disabled) {
+  background: #2a261d;
+  border-color: #2a261d;
+}
+.botao:disabled {
+  background: #e3dccb;
+  border-color: #d6cdb8;
+  color: #5f5a4e;
+  cursor: not-allowed;
+}
+
+.dica {
+  margin: 0;
+  font-size: 13px;
+  color: #5f5a4e;
+  text-align: center;
+}
+
+/* ── Conteúdo dos termos ── */
+
+.docCabecalho {
+  text-align: center;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e3dccb;
+}
+
+.docMarca {
+  margin-bottom: 6px;
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #16140f;
+}
+
+.docVersao {
+  font-size: 13px;
+  color: #5f5a4e;
+}
+
+.parte {
+  margin: 36px 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e3dccb;
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: #16140f;
+}
+.docCabecalho + .parte { margin-top: 0; }
+
+.secao {
+  margin: 26px 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #16140f;
+}
+
+.paragrafo {
+  margin: 0 0 12px;
+  color: #2b2820;
+}
+
+.forte {
+  font-weight: 700;
+  color: #16140f;
+}
+
+.email {
+  font-weight: 700;
+  color: #84621d;
+  overflow-wrap: anywhere;
+}
+
+.destaque {
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: #fbf1dd;
+  border: 1px solid #ead3a4;
+  border-left: 3px solid #8a5a12;
+  border-radius: 8px;
+  color: #8a5a12;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.tabelaWrap {
+  overflow-x: auto;
+  margin-bottom: 12px;
+  border: 1px solid #e3dccb;
+  border-radius: 10px;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tabela th {
+  padding: 9px 12px;
+  background: #f2eee3;
+  color: #16140f;
+  text-align: left;
+  font-weight: 700;
+  border-bottom: 1px solid #e3dccb;
+}
+
+.tabela td {
+  padding: 9px 12px;
+  border-top: 1px solid #ece6d7;
+  color: #5f5a4e;
+  vertical-align: top;
+}
+.tabela td:first-child { color: #16140f; }
+.tabela th + th,
+.tabela td + td { border-left: 1px solid #ece6d7; }
+.tabela tbody tr:first-child td { border-top: none; }
+.tabela tbody tr:nth-child(even) { background: #fbf9f4; }
+
+.docRodape {
+  margin-top: 36px;
+  padding: 20px 24px;
+  background: #fbf9f4;
+  border: 1px solid #e3dccb;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.docRodapeNome {
+  margin-bottom: 4px;
+  font-weight: 700;
+  color: #16140f;
+}
+
+.docRodapeInfo {
+  font-size: 13px;
+  color: #5f5a4e;
+  overflow-wrap: anywhere;
+}
+
+.docRodapeVersao {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #5f5a4e;
+}
+
+@media (max-width: 700px) {
+  .conteudo { padding: 0 16px; }
+  .titulo { font-size: 32px; }
+  .apoio { font-size: 15px; }
+  .eyebrow { margin-top: 22px; }
+  .documento { padding: 20px 18px; }
+  .docRodape { padding: 16px; }
+}

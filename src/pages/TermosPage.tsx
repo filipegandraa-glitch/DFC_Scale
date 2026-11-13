@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToastErrorState } from '../hooks/useToastErrorState'
+import styles from './TermosPage.module.css'
 
 interface TermosPageProps {
   userId:   string
@@ -94,165 +95,109 @@ export default function TermosPage({ userId, userName, onAceitar }: TermosPagePr
     }) + ' (horário de Brasília)'
   }
 
+  const podeAceitar = Boolean(aceitoEm || lido)
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#080808',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      padding: '32px 16px 0',
-    }}>
-      {/* Cabeçalho */}
-      <div style={{ width: '100%', maxWidth: 800, marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 8,
-            background: 'linear-gradient(135deg, #c9a22a, #a07c1a)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
-            </svg>
+    <div className={styles.page}>
+      {/* ── Faixa escura: marca e chamada ── */}
+      <section className={styles.faixa} aria-labelledby="termos-titulo">
+        <div className={styles.faixaGlow} aria-hidden />
+        <div className={styles.conteudo}>
+          <div className={styles.nav}>
+            <span className={styles.marca}>
+              <img src="/symbol-gold.svg" alt="" width={22} height={22} />
+              <span>DFC <b>Scale</b></span>
+            </span>
           </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#f0f0f0', letterSpacing: '-0.3px' }}>
-              Termos de Uso e Política de Privacidade
-            </h1>
-            <p style={{ margin: 0, fontSize: 13, color: '#888' }}>
-              DFC ClinicScale — Versão 1.0 · Vigência: Abril de 2026
-            </p>
-          </div>
+
+          <p className={styles.eyebrow}>DFC ClinicScale</p>
+          <h1 id="termos-titulo" className={styles.titulo}>
+            Termos de Uso e Política de Privacidade
+          </h1>
+          <p className={styles.apoio}>
+            Versão 1.0 · Vigência: Abril de 2026
+          </p>
         </div>
-        {aceitoEm ? (
-          <div style={{
-            background: '#0d1a0d',
-            border: '1px solid #2e7d3260',
-            borderLeft: '3px solid #4caf50',
-            borderRadius: 8,
-            padding: '12px 16px',
-            fontSize: 13,
-            color: '#81c784',
-            lineHeight: 1.6,
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 10,
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-              <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            <div>
-              <strong style={{ color: '#a5d6a7' }}>Termos aceitos</strong>
-              <br />
-              Assinado por <strong style={{ color: '#a5d6a7' }}>{userName}</strong> em{' '}
-              <strong style={{ color: '#a5d6a7' }}>{formatarData(aceitoEm)}</strong>
+      </section>
+
+      {/* ── Corpo marfim ── */}
+      <main className={styles.corpo}>
+        <div className={styles.conteudo}>
+          <div className={styles.coluna}>
+            {aceitoEm ? (
+              <div className={`${styles.aviso} ${styles.avisoSucesso}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <div>
+                  <strong>Termos aceitos</strong>
+                  <br />
+                  Assinado por <strong>{userName}</strong> em{' '}
+                  <strong>{formatarData(aceitoEm)}</strong>
+                </div>
+              </div>
+            ) : (
+              <p className={`${styles.aviso} ${styles.avisoInfo}`}>
+                Leia os termos abaixo por completo antes de prosseguir. Role até o fim para habilitar o botão de aceite.
+              </p>
+            )}
+
+            {/* Texto dos termos com scroll (rolar até o fim libera o aceite) */}
+            <div
+              ref={scrollRef}
+              className={styles.documento}
+              role="region"
+              aria-label="Texto dos Termos de Uso e da Política de Privacidade"
+              tabIndex={0}
+            >
+              <TermosConteudo />
+            </div>
+
+            {/* Rodapé: aceite e botão */}
+            <div className={styles.rodape}>
+              <label
+                className={[
+                  styles.aceite,
+                  aceitoEm ? styles.aceiteFixo : '',
+                  podeAceitar ? '' : styles.aceiteBloqueado,
+                ].filter(Boolean).join(' ')}
+              >
+                <input
+                  type="checkbox"
+                  checked={aceitoEm ? true : aceito}
+                  disabled={aceitoEm ? true : !lido}
+                  onChange={e => setAceito(e.target.checked)}
+                />
+                <span className={styles.aceiteTexto}>
+                  Li e compreendi integralmente os Termos de Uso e a Política de Privacidade, incluindo o
+                  consentimento expresso para acesso simultâneo da GESTA (Seção 4) e as consequências
+                  da revogação (Seção 4.7). Concordo com todas as disposições.
+                </span>
+              </label>
+
+              {erro && (
+                <p className={styles.erro}>{erro}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={handleAceitar}
+                disabled={aceitoEm ? false : (!aceito || loading)}
+                className={styles.botao}
+              >
+                {loading ? 'Registrando aceite...' : aceitoEm ? 'Acessar a Plataforma' : 'Aceitar e Acessar a Plataforma'}
+              </button>
+
+              {!lido && !aceitoEm && (
+                <p className={styles.dica}>
+                  Role até o fim do documento para habilitar o aceite.
+                </p>
+              )}
             </div>
           </div>
-        ) : (
-          <div style={{
-            background: '#1a1506',
-            border: '1px solid #c9a22a40',
-            borderRadius: 8,
-            padding: '10px 14px',
-            fontSize: 13,
-            color: '#c9a22a',
-            lineHeight: 1.5,
-          }}>
-            Leia os termos abaixo por completo antes de prosseguir. Role até o fim para habilitar o botão de aceite.
-          </div>
-        )}
-      </div>
-
-      {/* Corpo com scroll */}
-      <div
-        ref={scrollRef}
-        style={{
-          width: '100%',
-          maxWidth: 800,
-          flex: 1,
-          overflowY: 'auto',
-          maxHeight: 'calc(100vh - 260px)',
-          background: '#111',
-          border: '1px solid #222',
-          borderRadius: 12,
-          padding: '28px 32px',
-          color: '#d0d0d0',
-          fontSize: 14,
-          lineHeight: 1.75,
-        }}
-      >
-        <TermosConteudo />
-      </div>
-
-      {/* Rodapé fixo */}
-      <div style={{
-        width: '100%',
-        maxWidth: 800,
-        padding: '20px 0 32px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-      }}>
-        <label style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 10,
-          cursor: aceitoEm ? 'default' : lido ? 'pointer' : 'not-allowed',
-          opacity: aceitoEm || lido ? 1 : 0.45,
-          userSelect: 'none',
-        }}>
-          <input
-            type="checkbox"
-            checked={aceitoEm ? true : aceito}
-            disabled={aceitoEm ? true : !lido}
-            onChange={e => setAceito(e.target.checked)}
-            style={{ marginTop: 3, accentColor: '#c9a22a', width: 16, height: 16, flexShrink: 0, cursor: 'inherit' }}
-          />
-          <span style={{ fontSize: 13, color: '#ccc', lineHeight: 1.5 }}>
-            Li e compreendi integralmente os Termos de Uso e a Política de Privacidade, incluindo o
-            consentimento expresso para acesso simultâneo da GESTA (Seção 4) e as consequências
-            da revogação (Seção 4.7). Concordo com todas as disposições.
-          </span>
-        </label>
-
-        {erro && (
-          <p style={{ margin: 0, fontSize: 13, color: '#e05c5c' }}>{erro}</p>
-        )}
-
-        <button
-          onClick={handleAceitar}
-          disabled={aceitoEm ? false : (!aceito || loading)}
-          style={{
-            width: '100%',
-            padding: '14px 0',
-            borderRadius: 8,
-            border: 'none',
-            background: (aceitoEm || (aceito && !loading))
-              ? 'linear-gradient(135deg, #c9a22a, #a07c1a)'
-              : '#1e1e1e',
-            color: (aceitoEm || (aceito && !loading)) ? '#fff' : '#555',
-            fontSize: 15,
-            fontWeight: 600,
-            cursor: (aceitoEm || (aceito && !loading)) ? 'pointer' : 'not-allowed',
-            transition: 'all 0.2s',
-            letterSpacing: '0.2px',
-          }}
-        >
-          {loading ? 'Registrando aceite...' : aceitoEm ? 'Acessar a Plataforma' : 'Aceitar e Acessar a Plataforma'}
-        </button>
-
-        {!lido && !aceitoEm && (
-          <p style={{ margin: 0, fontSize: 12, color: '#555', textAlign: 'center' }}>
-            Role até o fim do documento para habilitar o aceite.
-          </p>
-        )}
-      </div>
+        </div>
+      </main>
     </div>
   )
 }
@@ -260,59 +205,29 @@ export default function TermosPage({ userId, userName, onAceitar }: TermosPagePr
 // ─── Conteúdo dos termos ─────────────────────────────────────────────────────
 
 function S({ children }: { children: React.ReactNode }) {
-  return <p style={{ margin: '0 0 12px', color: '#bbb' }}>{children}</p>
+  return <p className={styles.paragrafo}>{children}</p>
 }
 
 function H1({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 style={{
-      margin: '32px 0 16px',
-      fontSize: 16,
-      fontWeight: 700,
-      color: '#c9a22a',
-      borderBottom: '1px solid #222',
-      paddingBottom: 8,
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-    }}>{children}</h2>
-  )
+  return <h2 className={styles.parte}>{children}</h2>
 }
 
 function H2({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 style={{
-      margin: '24px 0 10px',
-      fontSize: 14,
-      fontWeight: 600,
-      color: '#e0e0e0',
-    }}>{children}</h3>
-  )
+  return <h3 className={styles.secao}>{children}</h3>
 }
 
 function Destaque({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      background: '#1a1506',
-      border: '1px solid #c9a22a50',
-      borderLeft: '3px solid #c9a22a',
-      borderRadius: 6,
-      padding: '12px 16px',
-      margin: '16px 0',
-      color: '#d4b84a',
-      fontSize: 13,
-      lineHeight: 1.6,
-    }}>{children}</div>
-  )
+  return <div className={styles.destaque}>{children}</div>
 }
 
 function TermosConteudo() {
   return (
     <div>
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#f0f0f0', marginBottom: 4 }}>
+      <div className={styles.docCabecalho}>
+        <div className={styles.docMarca}>
           DFC CLINICSCALE
         </div>
-        <div style={{ fontSize: 13, color: '#666' }}>
+        <div className={styles.docVersao}>
           Versão: 1.0 &nbsp;|&nbsp; Vigência: Abril de 2026 &nbsp;|&nbsp; Atualização: Abril de 2026
         </div>
       </div>
@@ -321,9 +236,9 @@ function TermosConteudo() {
 
       <H2>1. Das Partes e da Aceitação</H2>
       <S>1.1. Estes Termos de Uso e Política de Privacidade ("Termos") regulam o acesso e uso da plataforma DFC ClinicScale e estabelecem os direitos e obrigações entre:</S>
-      <S><strong style={{ color: '#e0e0e0' }}>OPERADORA DA PLATAFORMA:</strong><br />
+      <S><strong className={styles.forte}>OPERADORA DA PLATAFORMA:</strong><br />
       GESTA CONSULTORIA INTEGRADA LTDA, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº 60.619.849/0001-70, estabelecida sito à Rua Orfanato, nº 411, Apartamento 84, Torre A, Bairro Vila Prudente, São Paulo/SP, CEP 03131-010, doravante denominada "GESTA";</S>
-      <S><strong style={{ color: '#e0e0e0' }}>USUÁRIO:</strong><br />
+      <S><strong className={styles.forte}>USUÁRIO:</strong><br />
       Pessoa física ou jurídica, proprietária ou gestora de clínica odontológica, devidamente identificada no momento do cadastro, cliente de produto ou serviço da GESTA, doravante denominado "USUÁRIO".</S>
       <S>1.2. Ao acessar, cadastrar-se ou utilizar qualquer funcionalidade da plataforma DFC ClinicScale, o USUÁRIO declara, de forma livre, informada e inequívoca, nos termos do art. 5º, XII, da Lei nº 13.709/2018 (LGPD) e do art. 7º, IX, da Lei nº 12.965/2014 (Marco Civil da Internet):</S>
       <S>a) ter lido e compreendido integralmente estes Termos;<br />
@@ -413,12 +328,12 @@ function TermosConteudo() {
       <S>9.1. FUNDAMENTO LEGAL: Todo tratamento de dados pessoais realizado pela GESTA está em conformidade com a Lei nº 13.709/2018 (LGPD), a Lei nº 12.965/2014 (Marco Civil da Internet), o Código Civil (Lei nº 10.406/2002) e demais normas aplicáveis.</S>
       <S>9.2. A GESTA atua como Controladora dos dados pessoais do USUÁRIO (art. 5º, VI, LGPD), sendo responsável pelas decisões sobre o tratamento dos dados.</S>
       <S>9.3. DADOS COLETADOS E BASES LEGAIS:</S>
-      <div style={{ overflowX: 'auto', marginBottom: 12 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      <div className={styles.tabelaWrap}>
+        <table className={styles.tabela}>
           <thead>
             <tr>
               {['Categoria de Dado', 'Exemplos', 'Base Legal (LGPD)'].map(h => (
-                <th key={h} style={{ padding: '8px 12px', background: '#1a1a1a', color: '#c9a22a', textAlign: 'left', border: '1px solid #2a2a2a', fontWeight: 600 }}>{h}</th>
+                <th key={h} scope="col">{h}</th>
               ))}
             </tr>
           </thead>
@@ -430,10 +345,10 @@ function TermosConteudo() {
               ['Dados de uso da plataforma', 'Funcionalidades acessadas, frequência (anonimizados)', 'Art. 7º, IX – legítimo interesse'],
               ['Dados de comunicação', 'E-mails e mensagens de suporte', 'Art. 7º, V e II – contrato e obrigação legal'],
             ].map(([cat, ex, base], i) => (
-              <tr key={i} style={{ background: i % 2 === 0 ? '#141414' : '#111' }}>
-                <td style={{ padding: '8px 12px', border: '1px solid #222', color: '#d0d0d0' }}>{cat}</td>
-                <td style={{ padding: '8px 12px', border: '1px solid #222', color: '#aaa' }}>{ex}</td>
-                <td style={{ padding: '8px 12px', border: '1px solid #222', color: '#aaa' }}>{base}</td>
+              <tr key={i}>
+                <td>{cat}</td>
+                <td>{ex}</td>
+                <td>{base}</td>
               </tr>
             ))}
           </tbody>
@@ -454,12 +369,12 @@ function TermosConteudo() {
 
       <H2>11. Da Retenção e Eliminação dos Dados</H2>
       <S>11.1. Após o encerramento do vínculo contratual, os dados serão retidos pelos prazos abaixo:</S>
-      <div style={{ overflowX: 'auto', marginBottom: 12 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      <div className={styles.tabelaWrap}>
+        <table className={styles.tabela}>
           <thead>
             <tr>
               {['Categoria de Dado', 'Prazo de Retenção', 'Fundamento'].map(h => (
-                <th key={h} style={{ padding: '8px 12px', background: '#1a1a1a', color: '#c9a22a', textAlign: 'left', border: '1px solid #2a2a2a', fontWeight: 600 }}>{h}</th>
+                <th key={h} scope="col">{h}</th>
               ))}
             </tr>
           </thead>
@@ -470,10 +385,10 @@ function TermosConteudo() {
               ['Registros de acesso', '6 (seis) meses', 'Art. 15, Lei nº 12.965/2014 – Marco Civil'],
               ['Dados de comunicação e suporte', '2 (dois) anos', 'Legítimo interesse da GESTA'],
             ].map(([cat, prazo, fund], i) => (
-              <tr key={i} style={{ background: i % 2 === 0 ? '#141414' : '#111' }}>
-                <td style={{ padding: '8px 12px', border: '1px solid #222', color: '#d0d0d0' }}>{cat}</td>
-                <td style={{ padding: '8px 12px', border: '1px solid #222', color: '#aaa' }}>{prazo}</td>
-                <td style={{ padding: '8px 12px', border: '1px solid #222', color: '#aaa' }}>{fund}</td>
+              <tr key={i}>
+                <td>{cat}</td>
+                <td>{prazo}</td>
+                <td>{fund}</td>
               </tr>
             ))}
           </tbody>
@@ -497,7 +412,7 @@ function TermosConteudo() {
       g) Informação sobre entidades com as quais a GESTA compartilhou dados;<br />
       h) Revogação do consentimento a qualquer momento, com as consequências previstas na Seção 4.7;<br />
       i) Revisão de decisões automatizadas, quando aplicável.</S>
-      <S>13.2. Para exercer qualquer direito acima, o USUÁRIO deve contatar a GESTA pelo <strong style={{ color: '#c9a22a' }}>suporte@gestaa.com.br</strong> ou pelo WhatsApp com o time de Customer Success da GESTA. A GESTA responderá no prazo de até 15 (quinze) dias úteis, prorrogável por igual período mediante justificativa.</S>
+      <S>13.2. Para exercer qualquer direito acima, o USUÁRIO deve contatar a GESTA pelo <strong className={styles.email}>suporte@gestaa.com.br</strong> ou pelo WhatsApp com o time de Customer Success da GESTA. A GESTA responderá no prazo de até 15 (quinze) dias úteis, prorrogável por igual período mediante justificativa.</S>
 
       <H2>14. Do Aceite Eletrônico e do Log de Confirmação</H2>
       <S>14.1. O aceite destes Termos é realizado de forma eletrônica, por ação afirmativa do USUÁRIO (clique em botão ou marcação de checkbox), com plena validade jurídica nos termos:<br />
@@ -519,19 +434,12 @@ function TermosConteudo() {
       <S>16.4. A omissão ou tolerância da GESTA no exercício de qualquer direito não constituirá renúncia.</S>
       <S>16.5. Estes Termos são regidos pelo Código Civil (Lei nº 10.406/2002), especialmente pelos princípios da boa-fé objetiva (art. 422) e da função social do contrato (art. 421).</S>
 
-      <div style={{
-        marginTop: 40,
-        padding: '20px 24px',
-        background: '#141414',
-        border: '1px solid #222',
-        borderRadius: 8,
-        textAlign: 'center',
-      }}>
-        <div style={{ fontWeight: 700, color: '#e0e0e0', marginBottom: 4 }}>GESTA CONSULTORIA INTEGRADA LTDA</div>
-        <div style={{ fontSize: 13, color: '#666' }}>
+      <div className={styles.docRodape}>
+        <div className={styles.docRodapeNome}>GESTA CONSULTORIA INTEGRADA LTDA</div>
+        <div className={styles.docRodapeInfo}>
           CNPJ: 60.619.849/0001-70 &nbsp;|&nbsp; São Paulo/SP &nbsp;|&nbsp; suporte@gestaa.com.br
         </div>
-        <div style={{ fontSize: 12, color: '#555', marginTop: 6 }}>Versão 1.0 – vigente desde Abril de 2026</div>
+        <div className={styles.docRodapeVersao}>Versão 1.0 – vigente desde Abril de 2026</div>
       </div>
     </div>
   )

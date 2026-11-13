@@ -249,285 +249,297 @@ export default function EstruturaDrePage({ podeEditar, nomeUsuario, menuPerfil, 
   const subtotalDepois = (linha: LinhaDreId) => SUBTOTAIS_DRE.find(s => s.depoisDe === linha)
 
   return (
-    <div className={base.page}>
-      <header className={base.topo}>
-        <button type="button" className={base.marca} onClick={sairCom(onVoltar)} aria-label="DFC Scale — voltar">
-          <img src="/symbol-gold.svg" alt="" className={base.simbolo} />
-          <span>DFC <strong>Scale</strong></span>
-        </button>
-        <div className={base.topoAcoes}>
-          <button type="button" className={base.linkVoltar} onClick={sairCom(onVoltar)}>← Voltar</button>
-          {menuPerfil}
+    <div className={`${base.page} ${styles.page}`}>
+      {/* ── Faixa escura: navegação e título ── */}
+      <header className={`${base.faixa} tema-grafite`}>
+        <div className={base.faixaGlow} aria-hidden />
+        <div className={base.faixaConteudo}>
+          <div className={base.nav}>
+            <button type="button" className={base.marca} onClick={sairCom(onVoltar)} aria-label="DFC Scale — voltar">
+              <img src="/symbol-gold.svg" alt="" width={22} height={22} />
+              <span>DFC <b>Scale</b></span>
+            </button>
+            <div className={base.navDir}>
+              <button type="button" className={base.navLink} onClick={sairCom(onVoltar)}>← Voltar</button>
+              {menuPerfil}
+            </div>
+          </div>
+
+          <div className={base.faixaCabeca}>
+            <p className={base.eyebrow}>{podeEditar ? 'Perfil administrativo' : 'Perfil'}</p>
+            <h1 className={base.titulo}>Estrutura do DRE</h1>
+            <p className={base.apoio}>
+              O DRE gerencial tem as mesmas linhas para todas as empresas. Dentro de cada linha ficam as contas do
+              segmento da empresa: é por elas que os lançamentos são reconhecidos e organizados.
+              {podeEditar
+                ? ' Só administradores alteram a estrutura; os usuários apenas consultam.'
+                : ' Só administradores podem alterar a estrutura.'}
+            </p>
+          </div>
         </div>
       </header>
 
-      <main className={`${base.conteudo} ${styles.conteudo}`}>
-        <p className={base.eyebrow}>{podeEditar ? 'Perfil administrativo' : 'Perfil'}</p>
-        <h1 className={base.titulo}>Estrutura do DRE</h1>
-        <p className={base.intro}>
-          O DRE gerencial tem as mesmas linhas para todas as empresas. Dentro de cada linha ficam as contas do
-          segmento da empresa: é por elas que os lançamentos são reconhecidos e organizados.
-          {podeEditar
-            ? ' Só administradores alteram a estrutura; os usuários apenas consultam.'
-            : ' Só administradores podem alterar a estrutura.'}
-        </p>
+      {/* ── Corpo marfim ── */}
+      <main className={`${base.corpo} tema-marfim`}>
+        <div className={base.conteudo}>
 
-        {carregamento === 'carregando' && (
-          <div className={base.carregando} role="status">
-            <span className={base.spinner} aria-hidden />
-            Carregando a estrutura…
-          </div>
-        )}
+          {carregamento === 'carregando' && (
+            <div className={base.carregando} role="status">
+              <span className={base.spinner} aria-hidden />
+              Carregando a estrutura…
+            </div>
+          )}
 
-        {carregamento === 'erro' && (
-          <div className={base.erroCarga} role="alert">
-            <p>Não foi possível carregar a estrutura{erroCarregamento ? `: ${erroCarregamento}` : '.'}</p>
-            <button type="button" className={base.btnSecundario} onClick={() => void carregar()}>Tentar de novo</button>
-          </div>
-        )}
+          {carregamento === 'erro' && (
+            <div className={base.erroCarga} role="alert">
+              <p>Não foi possível carregar a estrutura{erroCarregamento ? `: ${erroCarregamento}` : '.'}</p>
+              <button type="button" className={base.btnSecundario} onClick={() => void carregar()}>Tentar de novo</button>
+            </div>
+          )}
 
-        {carregamento === 'pronto' && (
-          <>
-            {/* ── Segmentos ── */}
-            <section className={base.secao} aria-labelledby="segmentos-titulo">
-              <h2 id="segmentos-titulo" className={base.secaoTitulo}>Segmento</h2>
-              <div className={styles.segmentos} role="tablist" aria-label="Segmentos">
-                {atual.segmentos.map(s => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={s.id === segmento.id}
-                    className={`${styles.segmento} ${s.id === segmento.id ? styles.segmentoAtivo : ''}`}
-                    onClick={() => { setSegmentoId(s.id); setNovaConta(null); setEditandoPalavras(null) }}
-                  >
-                    {s.nome}
-                    {s.id === SEGMENTO_PADRAO && <span className={styles.segmentoTag}>padrão</span>}
-                  </button>
-                ))}
-                {podeEditar && !novoSegmento && (
-                  <button
-                    type="button"
-                    className={styles.segmentoNovo}
-                    onClick={() => setNovoSegmento({ nome: '', copiarDe: segmento.id, erro: '' })}
-                    disabled={salvando}
-                  >
-                    + Novo segmento
-                  </button>
+          {carregamento === 'pronto' && (
+            <>
+              {/* ── Segmentos ── */}
+              <section className={base.secao} aria-labelledby="segmentos-titulo">
+                <h2 id="segmentos-titulo" className={base.secaoTitulo}>Segmento</h2>
+                <div className={styles.segmentos} role="tablist" aria-label="Segmentos">
+                  {atual.segmentos.map(s => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={s.id === segmento.id}
+                      className={`${styles.segmento} ${s.id === segmento.id ? styles.segmentoAtivo : ''}`}
+                      onClick={() => { setSegmentoId(s.id); setNovaConta(null); setEditandoPalavras(null) }}
+                    >
+                      {s.nome}
+                      {s.id === SEGMENTO_PADRAO && <span className={styles.segmentoTag}>padrão</span>}
+                    </button>
+                  ))}
+                  {podeEditar && !novoSegmento && (
+                    <button
+                      type="button"
+                      className={styles.segmentoNovo}
+                      onClick={() => setNovoSegmento({ nome: '', copiarDe: segmento.id, erro: '' })}
+                      disabled={salvando}
+                    >
+                      + Novo segmento
+                    </button>
+                  )}
+                </div>
+
+                {novoSegmento && (
+                  <form className={styles.formulario} onSubmit={criarSegmento}>
+                    <label className={styles.campoForm}>
+                      <span>Nome do segmento</span>
+                      <input
+                        autoFocus
+                        value={novoSegmento.nome}
+                        onChange={e => setNovoSegmento({ ...novoSegmento, nome: e.target.value, erro: '' })}
+                        placeholder="Ex.: Estética e harmonização"
+                        maxLength={60}
+                      />
+                    </label>
+                    <label className={styles.campoForm}>
+                      <span>Começar com as contas de</span>
+                      <select value={novoSegmento.copiarDe} onChange={e => setNovoSegmento({ ...novoSegmento, copiarDe: e.target.value })}>
+                        {atual.segmentos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                      </select>
+                    </label>
+                    <div className={styles.formAcoes}>
+                      <button type="submit" className={styles.btnPrimario}>Criar segmento</button>
+                      <button type="button" className={base.btnSecundario} onClick={() => setNovoSegmento(null)}>Cancelar</button>
+                    </div>
+                    {novoSegmento.erro && <p className={styles.erroForm}>{novoSegmento.erro}</p>}
+                  </form>
                 )}
-              </div>
 
-              {novoSegmento && (
-                <form className={styles.formulario} onSubmit={criarSegmento}>
-                  <label className={styles.campoForm}>
-                    <span>Nome do segmento</span>
-                    <input
-                      autoFocus
-                      value={novoSegmento.nome}
-                      onChange={e => setNovoSegmento({ ...novoSegmento, nome: e.target.value, erro: '' })}
-                      placeholder="Ex.: Estética e harmonização"
-                      maxLength={60}
-                    />
-                  </label>
-                  <label className={styles.campoForm}>
-                    <span>Começar com as contas de</span>
-                    <select value={novoSegmento.copiarDe} onChange={e => setNovoSegmento({ ...novoSegmento, copiarDe: e.target.value })}>
-                      {atual.segmentos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-                    </select>
-                  </label>
-                  <div className={styles.formAcoes}>
-                    <button type="submit" className={styles.btnPrimario}>Criar segmento</button>
-                    <button type="button" className={base.btnSecundario} onClick={() => setNovoSegmento(null)}>Cancelar</button>
-                  </div>
-                  {novoSegmento.erro && <p className={styles.erroForm}>{novoSegmento.erro}</p>}
-                </form>
+                <p className={base.secaoTexto}>
+                  {segmento.contas.filter(c => c.ativo).length} contas ativas
+                  {segmento.contas.some(c => !c.ativo) && `, ${segmento.contas.filter(c => !c.ativo).length} desativadas`}
+                  {empresasNoSegmento(segmento.id) !== null && ` · ${empresasNoSegmento(segmento.id)} empresas neste segmento`}
+                  {segmento.id === SEGMENTO_PADRAO && ' · empresas sem segmento definido usam este.'}
+                </p>
+              </section>
+
+              {/* ── Linhas e contas ── */}
+              <section className={base.secao} aria-labelledby="linhas-titulo">
+                <h2 id="linhas-titulo" className={base.secaoTitulo}>Linhas e contas — {segmento.nome}</h2>
+                <p className={base.secaoTexto}>
+                  As linhas e os subtotais são fixos (método ClinicScale). Cada lançamento entra na linha da conta
+                  em que foi classificado. As palavras-chave ajudam a reconhecer a conta pela descrição do extrato.
+                  {podeEditar && ' Contas desativadas deixam de receber lançamentos novos, mas os antigos continuam organizados.'}
+                </p>
+
+                <ol className={styles.arvore}>
+                  {LINHAS_DRE.map(linha => {
+                    const contas = contasDaLinha(linha.id)
+                    const subtotal = subtotalDepois(linha.id)
+                    return (
+                      <Fragment key={linha.id}>
+                        <li className={styles.linha}>
+                          <div className={styles.linhaTopo}>
+                            <span className={`${styles.sinal} ${linha.tipo === 'receita' ? styles.sinalMais : styles.sinalMenos}`} aria-hidden>
+                              {linha.tipo === 'receita' ? '+' : '−'}
+                            </span>
+                            <div className={styles.linhaTexto}>
+                              <h3 className={styles.linhaRotulo}>{linha.rotulo}</h3>
+                              <p className={styles.linhaDescricao}>{linha.descricao}</p>
+                            </div>
+                            <span className={styles.linhaContagem}>
+                              {contas.filter(c => c.ativo).length} {contas.filter(c => c.ativo).length === 1 ? 'conta' : 'contas'}
+                            </span>
+                          </div>
+
+                          <ul className={styles.contas}>
+                            {contas.map(conta => {
+                              const editando = editandoPalavras?.nome === conta.nome
+                              const extras = conta.palavras.length - MAX_CHIPS
+                              return (
+                                <li key={conta.nome} className={`${styles.conta} ${conta.ativo ? '' : styles.contaInativa}`}>
+                                  <div className={styles.contaTopo}>
+                                    <span className={styles.contaNome}>
+                                      {conta.nome}
+                                      {!conta.ativo && <span className={styles.tagInativa}>desativada</span>}
+                                    </span>
+                                    {podeEditar && !editando && (
+                                      <span className={styles.contaAcoes}>
+                                        <button
+                                          type="button"
+                                          className={styles.linkAcao}
+                                          onClick={() => { setNovaConta(null); setEditandoPalavras({ nome: conta.nome, texto: conta.palavras.join(', ') }) }}
+                                          disabled={salvando}
+                                        >
+                                          Palavras-chave
+                                        </button>
+                                        <button type="button" className={styles.linkAcao} onClick={() => alternarConta(conta.nome)} disabled={salvando}>
+                                          {conta.ativo ? 'Desativar' : 'Reativar'}
+                                        </button>
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {editando ? (
+                                    <form className={styles.formPalavras} onSubmit={aplicarPalavras}>
+                                      <label className={styles.campoForm}>
+                                        <span>Palavras-chave (separe por vírgula)</span>
+                                        <textarea
+                                          autoFocus
+                                          rows={2}
+                                          value={editandoPalavras.texto}
+                                          onChange={e => setEditandoPalavras({ ...editandoPalavras, texto: e.target.value })}
+                                        />
+                                      </label>
+                                      <div className={styles.formAcoes}>
+                                        <button type="submit" className={styles.btnPrimario}>Aplicar</button>
+                                        <button type="button" className={base.btnSecundario} onClick={() => setEditandoPalavras(null)}>Cancelar</button>
+                                      </div>
+                                    </form>
+                                  ) : conta.palavras.length > 0 ? (
+                                    <p className={styles.palavras}>
+                                      <span className={base.srOnly}>Palavras-chave: </span>
+                                      {conta.palavras.slice(0, MAX_CHIPS).map(p => <span key={p} className={styles.chip}>{p}</span>)}
+                                      {extras > 0 && <span className={styles.chipMais} title={conta.palavras.slice(MAX_CHIPS).join(', ')}>+{extras}</span>}
+                                    </p>
+                                  ) : (
+                                    <p className={styles.semPalavras}>Sem palavras-chave: reconhecida pelo histórico ou pela IA.</p>
+                                  )}
+                                </li>
+                              )
+                            })}
+                          </ul>
+
+                          {podeEditar && (novaConta?.linha === linha.id ? (
+                            <form className={styles.formulario} onSubmit={adicionarConta}>
+                              <label className={styles.campoForm}>
+                                <span>Nome da conta</span>
+                                <input
+                                  autoFocus
+                                  value={novaConta.nome}
+                                  maxLength={120}
+                                  onChange={e => setNovaConta({ ...novaConta, nome: e.target.value, erro: '' })}
+                                />
+                              </label>
+                              <label className={styles.campoForm}>
+                                <span>Palavras-chave (opcional, separe por vírgula)</span>
+                                <input value={novaConta.palavras} onChange={e => setNovaConta({ ...novaConta, palavras: e.target.value })} />
+                              </label>
+                              <div className={styles.formAcoes}>
+                                <button type="submit" className={styles.btnPrimario}>Adicionar conta</button>
+                                <button type="button" className={base.btnSecundario} onClick={() => setNovaConta(null)}>Cancelar</button>
+                              </div>
+                              {novaConta.erro && <p className={styles.erroForm}>{novaConta.erro}</p>}
+                            </form>
+                          ) : (
+                            <button
+                              type="button"
+                              className={styles.adicionar}
+                              onClick={() => { setEditandoPalavras(null); setNovaConta({ linha: linha.id, nome: '', palavras: '', erro: '' }) }}
+                              disabled={salvando}
+                            >
+                              + Adicionar conta em {linha.rotulo.toLowerCase()}
+                            </button>
+                          ))}
+                        </li>
+
+                        {subtotal && (
+                          <li className={styles.subtotal} aria-label={`Subtotal: ${subtotal.rotulo}`}>
+                            <span className={styles.subtotalIgual} aria-hidden>=</span>
+                            <span className={styles.subtotalRotulo}>{subtotal.rotulo}</span>
+                            <span className={styles.subtotalFormula}>{subtotal.formula}</span>
+                          </li>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                </ol>
+              </section>
+
+              {/* ── Segmento de cada empresa (ADM) ── */}
+              {podeEditar && (
+                <section className={base.secao} aria-labelledby="empresas-titulo">
+                  <h2 id="empresas-titulo" className={base.secaoTitulo}>Segmento das empresas</h2>
+                  <p className={base.secaoTexto}>
+                    Define qual plano de contas cada empresa usa. Empresas sem escolha ficam em {atual.segmentos.find(s => s.id === SEGMENTO_PADRAO)?.nome}.
+                    {atual.segmentos.length === 1 && ' Crie outro segmento acima para poder trocar.'}
+                  </p>
+                  {empresas === null ? (
+                    <div className={base.carregando} role="status"><span className={base.spinner} aria-hidden />Carregando empresas…</div>
+                  ) : empresas.length === 0 ? (
+                    <p className={base.secaoTexto}>Nenhuma empresa ativa.</p>
+                  ) : (
+                    <ul className={styles.empresas}>
+                      {empresas.map(emp => (
+                        <li key={emp.id} className={styles.empresa}>
+                          <span className={styles.empresaNome}>
+                            {emp.nome}
+                            {emp.cnpj && <span className={styles.empresaCnpj}>{emp.cnpj}</span>}
+                          </span>
+                          <select
+                            aria-label={`Segmento de ${emp.nome}`}
+                            value={atual.empresas[emp.id] ?? SEGMENTO_PADRAO}
+                            onChange={e => definirSegmentoDaEmpresa(emp.id, e.target.value)}
+                            disabled={salvando || atual.segmentos.length === 1}
+                          >
+                            {atual.segmentos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                          </select>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
               )}
 
-              <p className={base.secaoTexto}>
-                {segmento.contas.filter(c => c.ativo).length} contas ativas
-                {segmento.contas.some(c => !c.ativo) && `, ${segmento.contas.filter(c => !c.ativo).length} desativadas`}
-                {empresasNoSegmento(segmento.id) !== null && ` · ${empresasNoSegmento(segmento.id)} empresas neste segmento`}
-                {segmento.id === SEGMENTO_PADRAO && ' · empresas sem segmento definido usam este.'}
-              </p>
-            </section>
-
-            {/* ── Linhas e contas ── */}
-            <section className={base.secao} aria-labelledby="linhas-titulo">
-              <h2 id="linhas-titulo" className={base.secaoTitulo}>Linhas e contas — {segmento.nome}</h2>
-              <p className={base.secaoTexto}>
-                As linhas e os subtotais são fixos (método ClinicScale). Cada lançamento entra na linha da conta
-                em que foi classificado. As palavras-chave ajudam a reconhecer a conta pela descrição do extrato.
-                {podeEditar && ' Contas desativadas deixam de receber lançamentos novos, mas os antigos continuam organizados.'}
-              </p>
-
-              <ol className={styles.arvore}>
-                {LINHAS_DRE.map(linha => {
-                  const contas = contasDaLinha(linha.id)
-                  const subtotal = subtotalDepois(linha.id)
-                  return (
-                    <Fragment key={linha.id}>
-                      <li className={styles.linha}>
-                        <div className={styles.linhaTopo}>
-                          <span className={`${styles.sinal} ${linha.tipo === 'receita' ? styles.sinalMais : styles.sinalMenos}`} aria-hidden>
-                            {linha.tipo === 'receita' ? '+' : '−'}
-                          </span>
-                          <div className={styles.linhaTexto}>
-                            <h3 className={styles.linhaRotulo}>{linha.rotulo}</h3>
-                            <p className={styles.linhaDescricao}>{linha.descricao}</p>
-                          </div>
-                          <span className={styles.linhaContagem}>
-                            {contas.filter(c => c.ativo).length} {contas.filter(c => c.ativo).length === 1 ? 'conta' : 'contas'}
-                          </span>
-                        </div>
-
-                        <ul className={styles.contas}>
-                          {contas.map(conta => {
-                            const editando = editandoPalavras?.nome === conta.nome
-                            const extras = conta.palavras.length - MAX_CHIPS
-                            return (
-                              <li key={conta.nome} className={`${styles.conta} ${conta.ativo ? '' : styles.contaInativa}`}>
-                                <div className={styles.contaTopo}>
-                                  <span className={styles.contaNome}>
-                                    {conta.nome}
-                                    {!conta.ativo && <span className={styles.tagInativa}>desativada</span>}
-                                  </span>
-                                  {podeEditar && !editando && (
-                                    <span className={styles.contaAcoes}>
-                                      <button
-                                        type="button"
-                                        className={styles.linkAcao}
-                                        onClick={() => { setNovaConta(null); setEditandoPalavras({ nome: conta.nome, texto: conta.palavras.join(', ') }) }}
-                                        disabled={salvando}
-                                      >
-                                        Palavras-chave
-                                      </button>
-                                      <button type="button" className={styles.linkAcao} onClick={() => alternarConta(conta.nome)} disabled={salvando}>
-                                        {conta.ativo ? 'Desativar' : 'Reativar'}
-                                      </button>
-                                    </span>
-                                  )}
-                                </div>
-
-                                {editando ? (
-                                  <form className={styles.formPalavras} onSubmit={aplicarPalavras}>
-                                    <label className={styles.campoForm}>
-                                      <span>Palavras-chave (separe por vírgula)</span>
-                                      <textarea
-                                        autoFocus
-                                        rows={2}
-                                        value={editandoPalavras.texto}
-                                        onChange={e => setEditandoPalavras({ ...editandoPalavras, texto: e.target.value })}
-                                      />
-                                    </label>
-                                    <div className={styles.formAcoes}>
-                                      <button type="submit" className={styles.btnPrimario}>Aplicar</button>
-                                      <button type="button" className={base.btnSecundario} onClick={() => setEditandoPalavras(null)}>Cancelar</button>
-                                    </div>
-                                  </form>
-                                ) : conta.palavras.length > 0 ? (
-                                  <p className={styles.palavras}>
-                                    <span className={base.srOnly}>Palavras-chave: </span>
-                                    {conta.palavras.slice(0, MAX_CHIPS).map(p => <span key={p} className={styles.chip}>{p}</span>)}
-                                    {extras > 0 && <span className={styles.chipMais} title={conta.palavras.slice(MAX_CHIPS).join(', ')}>+{extras}</span>}
-                                  </p>
-                                ) : (
-                                  <p className={styles.semPalavras}>Sem palavras-chave: reconhecida pelo histórico ou pela IA.</p>
-                                )}
-                              </li>
-                            )
-                          })}
-                        </ul>
-
-                        {podeEditar && (novaConta?.linha === linha.id ? (
-                          <form className={styles.formulario} onSubmit={adicionarConta}>
-                            <label className={styles.campoForm}>
-                              <span>Nome da conta</span>
-                              <input
-                                autoFocus
-                                value={novaConta.nome}
-                                maxLength={120}
-                                onChange={e => setNovaConta({ ...novaConta, nome: e.target.value, erro: '' })}
-                              />
-                            </label>
-                            <label className={styles.campoForm}>
-                              <span>Palavras-chave (opcional, separe por vírgula)</span>
-                              <input value={novaConta.palavras} onChange={e => setNovaConta({ ...novaConta, palavras: e.target.value })} />
-                            </label>
-                            <div className={styles.formAcoes}>
-                              <button type="submit" className={styles.btnPrimario}>Adicionar conta</button>
-                              <button type="button" className={base.btnSecundario} onClick={() => setNovaConta(null)}>Cancelar</button>
-                            </div>
-                            {novaConta.erro && <p className={styles.erroForm}>{novaConta.erro}</p>}
-                          </form>
-                        ) : (
-                          <button
-                            type="button"
-                            className={styles.adicionar}
-                            onClick={() => { setEditandoPalavras(null); setNovaConta({ linha: linha.id, nome: '', palavras: '', erro: '' }) }}
-                            disabled={salvando}
-                          >
-                            + Adicionar conta em {linha.rotulo.toLowerCase()}
-                          </button>
-                        ))}
-                      </li>
-
-                      {subtotal && (
-                        <li className={styles.subtotal} aria-label={`Subtotal: ${subtotal.rotulo}`}>
-                          <span className={styles.subtotalIgual} aria-hidden>=</span>
-                          <span className={styles.subtotalRotulo}>{subtotal.rotulo}</span>
-                          <span className={styles.subtotalFormula}>{subtotal.formula}</span>
-                        </li>
-                      )}
-                    </Fragment>
-                  )
-                })}
-              </ol>
-            </section>
-
-            {/* ── Segmento de cada empresa (ADM) ── */}
-            {podeEditar && (
-              <section className={base.secao} aria-labelledby="empresas-titulo">
-                <h2 id="empresas-titulo" className={base.secaoTitulo}>Segmento das empresas</h2>
-                <p className={base.secaoTexto}>
-                  Define qual plano de contas cada empresa usa. Empresas sem escolha ficam em {atual.segmentos.find(s => s.id === SEGMENTO_PADRAO)?.nome}.
-                  {atual.segmentos.length === 1 && ' Crie outro segmento acima para poder trocar.'}
+              {!podeEditar && (
+                <p className={base.metaLeitura}>
+                  {versao
+                    ? `Última alteração em ${formatarDataHora(versao)}${autor ? `, por ${autor}` : ''}.`
+                    : 'Estrutura padrão do método.'}
                 </p>
-                {empresas === null ? (
-                  <div className={base.carregando} role="status"><span className={base.spinner} aria-hidden />Carregando empresas…</div>
-                ) : empresas.length === 0 ? (
-                  <p className={base.secaoTexto}>Nenhuma empresa ativa.</p>
-                ) : (
-                  <ul className={styles.empresas}>
-                    {empresas.map(emp => (
-                      <li key={emp.id} className={styles.empresa}>
-                        <span className={styles.empresaNome}>
-                          {emp.nome}
-                          {emp.cnpj && <span className={styles.empresaCnpj}>{emp.cnpj}</span>}
-                        </span>
-                        <select
-                          aria-label={`Segmento de ${emp.nome}`}
-                          value={atual.empresas[emp.id] ?? SEGMENTO_PADRAO}
-                          onChange={e => definirSegmentoDaEmpresa(emp.id, e.target.value)}
-                          disabled={salvando || atual.segmentos.length === 1}
-                        >
-                          {atual.segmentos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-                        </select>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            )}
-
-            {!podeEditar && (
-              <p className={base.metaLeitura}>
-                {versao
-                  ? `Última alteração em ${formatarDataHora(versao)}${autor ? `, por ${autor}` : ''}.`
-                  : 'Estrutura padrão do método.'}
-              </p>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
+        </div>
       </main>
 
       {podeEditar && carregamento === 'pronto' && (

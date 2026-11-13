@@ -48,11 +48,12 @@ export default function LoginPage({ onForgotPassword, onVoltar }: LoginPageProps
 
   return (
     <div className={styles.container}>
-      <div className={styles.card}>
-        <div className={styles.logo}>
-          <img src="/logo.png" height="34" alt="PainelGestaa" className={styles.logoImg} />
-        </div>
+      <div className={styles.marca}>
+        <img src="/symbol-gold.svg" alt="" width={22} height={22} />
+        <span>DFC <b>Scale</b></span>
+      </div>
 
+      <div className={styles.card}>
         <div className={styles.formHeader}>
           <h1 className={styles.title}>Bem-vindo de volta</h1>
           <p className={styles.subtitle}>Entre com sua conta para continuar</p>
@@ -131,9 +132,11 @@ export default function LoginPage({ onForgotPassword, onVoltar }: LoginPageProps
         </form>
 
         {onVoltar && (
-          <button type="button" className={styles.voltarLink} onClick={onVoltar}>
-            ← Voltar ao início
-          </button>
+          <div className={styles.footer}>
+            <button type="button" className={styles.voltarLink} onClick={onVoltar}>
+              ← Voltar ao início
+            </button>
+          </div>
         )}
       </div>
     </div>

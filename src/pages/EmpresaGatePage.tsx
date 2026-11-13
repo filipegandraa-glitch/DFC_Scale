@@ -758,17 +758,52 @@ export default function EmpresaGatePage({
         botaoSelecionar: 'Acessar DFC',
       }
 
+  const primeiroNome = extrairPrimeiroNome(nomeUsuario, emailUsuario)
+
+  const navegacao = (
+    <div className={styles.nav}>
+      <span className={styles.marca}>
+        <img src="/symbol-gold.svg" alt="" width={22} height={22} />
+        <span>DFC <b>Scale</b></span>
+      </span>
+      {menuPerfil && <div className={styles.navDir}>{menuPerfil}</div>}
+    </div>
+  )
+
   if (loading) {
     return (
-      <div className={styles.loadingWrap}>
-        <div className={styles.spinner} />
+      <div className={styles.page}>
+        <header className={styles.faixa}>
+          <div className={styles.faixaGlow} aria-hidden />
+          <div className={styles.conteudo}>
+            {navegacao}
+            {primeiroNome && <p className={styles.eyebrow}>Olá, {primeiroNome}</p>}
+            <span className={styles.skelTitulo} aria-hidden />
+            <span className={styles.skelApoio} aria-hidden />
+          </div>
+        </header>
+        <main className={styles.corpo} aria-busy="true">
+          <div className={styles.conteudo}>
+            <p className={styles.srOnly} role="status">Carregando empresas…</p>
+            <ul className={styles.skelLista} aria-hidden>
+              {[0, 1].map(i => (
+                <li key={i} className={styles.skelItem}>
+                  <span className={styles.skelAvatar} />
+                  <span className={styles.skelTextos}>
+                    <span className={styles.skelTexto} />
+                    <span className={styles.skelTextoCurto} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </main>
       </div>
     )
   }
 
   const temEmpresas = empresas.length > 0
   const mostrarBusca = empresas.length > LIMITE_SEM_BUSCA
-  const primeiroNome = extrairPrimeiroNome(nomeUsuario, emailUsuario)
 
   const selecionar = (empresa: Empresa) => {
     lembrarUltimaEmpresa(empresa.id)
@@ -777,107 +812,115 @@ export default function EmpresaGatePage({
 
   return (
     <div className={styles.page}>
-      <header className={styles.topo}>
-        <span className={styles.marca}>
-          <img src="/symbol-gold.svg" alt="" className={styles.simbolo} />
-          <span>DFC <strong>Scale</strong></span>
-        </span>
-        <div className={styles.topoAcoes}>{menuPerfil}</div>
+      {/* ── Faixa escura: marca, perfil, saudação e título ── */}
+      <header className={styles.faixa}>
+        <div className={styles.faixaGlow} aria-hidden />
+        <div className={styles.conteudo}>
+          {navegacao}
+
+          {primeiroNome && <p className={styles.eyebrow}>Olá, {primeiroNome}</p>}
+
+          <div className={styles.faixaGrid}>
+            <div className={styles.faixaTexto}>
+              <h1 className={styles.titulo}>
+                {temEmpresas ? textos.tituloComEmpresas : textos.tituloSemEmpresas}
+              </h1>
+              <p className={styles.apoio}>
+                {temEmpresas ? textos.subtituloComEmpresas : textos.subtituloSemEmpresas}
+              </p>
+            </div>
+          </div>
+        </div>
       </header>
 
-      <main className={styles.conteudo}>
-        {primeiroNome && <p className={styles.eyebrow}>Olá, {primeiroNome}</p>}
-        <h1 className={styles.titulo}>
-          {temEmpresas ? textos.tituloComEmpresas : textos.tituloSemEmpresas}
-        </h1>
-        <p className={styles.subtitulo}>
-          {temEmpresas ? textos.subtituloComEmpresas : textos.subtituloSemEmpresas}
-        </p>
+      {/* ── Corpo marfim: busca e lista de empresas ── */}
+      <main className={styles.corpo}>
+        <div className={styles.conteudo}>
+          {mostrarBusca && (
+            <label className={styles.busca}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
+              </svg>
+              <span className={styles.srOnly}>Buscar empresa</span>
+              <input
+                type="search"
+                className={styles.buscaInput}
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                placeholder={isSystemAdmin ? 'Buscar por empresa ou criador' : 'Buscar empresa'}
+              />
+            </label>
+          )}
 
-        {mostrarBusca && (
-          <label className={styles.busca}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
-            </svg>
-            <span className={styles.srOnly}>Buscar empresa</span>
-            <input
-              type="search"
-              className={styles.buscaInput}
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              placeholder={isSystemAdmin ? 'Buscar por empresa ou criador' : 'Buscar empresa'}
-            />
-          </label>
-        )}
+          {temEmpresas && empresasOrdenadas.length === 0 && (
+            <p className={styles.semResultado}>
+              Nenhuma empresa encontrada para “{busca.trim()}”.
+            </p>
+          )}
 
-        {temEmpresas && empresasOrdenadas.length === 0 && (
-          <p className={styles.semResultado}>
-            Nenhuma empresa encontrada para “{busca.trim()}”.
-          </p>
-        )}
+          {(temEmpresas || podeCriarEmpresa) && (
+            <ul className={styles.lista}>
+              {empresasOrdenadas.map(emp => {
+                const podeEditar = podeEditarEmpresa(emp.id)
+                const ehUltima = emp.id === ultimaEmpresaId && empresas.length > 1
+                const cnpjFormatado = emp.cnpj ? formatarCnpj(emp.cnpj) : ''
 
-        {(temEmpresas || podeCriarEmpresa) && (
-          <ul className={styles.lista}>
-            {empresasOrdenadas.map(emp => {
-              const podeEditar = podeEditarEmpresa(emp.id)
-              const ehUltima = emp.id === ultimaEmpresaId && empresas.length > 1
-              const cnpjFormatado = emp.cnpj ? formatarCnpj(emp.cnpj) : ''
-
-              return (
-                <li key={emp.id} className={styles.item}>
-                  <button
-                    type="button"
-                    className={styles.itemPrincipal}
-                    onClick={() => selecionar(emp)}
-                    aria-label={`${textos.botaoSelecionar}: ${emp.nome}`}
-                  >
-                    {emp.card_background_url ? (
-                      <img src={emp.card_background_url} alt="" className={styles.avatarImg} />
-                    ) : (
-                      <span className={styles.avatar} aria-hidden>{iniciais(emp.nome)}</span>
-                    )}
-                    <span className={styles.itemTexto}>
-                      <span className={styles.itemNomeLinha}>
-                        <span className={styles.itemNome}>{emp.nome}</span>
-                        {ehUltima && <span className={styles.selo}>Último acesso</span>}
-                      </span>
-                      <span className={styles.itemDetalhe}>
-                        {cnpjFormatado && <>CNPJ {cnpjFormatado}</>}
-                        {isSystemAdmin && emp.donoNome && <>{cnpjFormatado ? ' · ' : ''}de {emp.donoNome}</>}
-                      </span>
-                    </span>
-                    <svg className={styles.itemSeta} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M5 12h14M13 6l6 6-6 6" />
-                    </svg>
-                  </button>
-                  {podeEditar && (
+                return (
+                  <li key={emp.id} className={styles.item}>
                     <button
                       type="button"
-                      className={styles.itemConfig}
-                      title={`Configurar ${emp.nome}`}
-                      aria-label={`Configurar ${emp.nome}`}
-                      onClick={() => abrirModalEdicao(emp)}
+                      className={styles.itemPrincipal}
+                      onClick={() => selecionar(emp)}
+                      aria-label={`${textos.botaoSelecionar}: ${emp.nome}`}
                     >
-                      <IconSettings />
+                      {emp.card_background_url ? (
+                        <img src={emp.card_background_url} alt="" className={styles.avatarImg} />
+                      ) : (
+                        <span className={styles.avatar} aria-hidden>{iniciais(emp.nome)}</span>
+                      )}
+                      <span className={styles.itemTexto}>
+                        <span className={styles.itemNomeLinha}>
+                          <span className={styles.itemNome}>{emp.nome}</span>
+                          {ehUltima && <span className={styles.selo}>Último acesso</span>}
+                        </span>
+                        <span className={styles.itemDetalhe}>
+                          {cnpjFormatado && <>CNPJ {cnpjFormatado}</>}
+                          {isSystemAdmin && emp.donoNome && <>{cnpjFormatado ? ' · ' : ''}de {emp.donoNome}</>}
+                        </span>
+                      </span>
+                      <svg className={styles.itemSeta} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M5 12h14M13 6l6 6-6 6" />
+                      </svg>
                     </button>
-                  )}
-                </li>
-              )
-            })}
+                    {podeEditar && (
+                      <button
+                        type="button"
+                        className={styles.itemConfig}
+                        title={`Configurar ${emp.nome}`}
+                        aria-label={`Configurar ${emp.nome}`}
+                        onClick={() => abrirModalEdicao(emp)}
+                      >
+                        <IconSettings />
+                      </button>
+                    )}
+                  </li>
+                )
+              })}
 
-            {podeCriarEmpresa && (
-              <li className={temEmpresas ? styles.itemNovaWrap : styles.itemNovaWrapDestaque}>
-                <button type="button" className={styles.itemNova} onClick={abrirModalCriacao}>
-                  <span className={styles.itemNovaIcone} aria-hidden>+</span>
-                  <span className={styles.itemTexto}>
-                    <span className={styles.itemNome}>{temEmpresas ? 'Nova empresa' : 'Criar empresa'}</span>
-                    <span className={styles.itemDetalhe}>Só precisa do nome e do CNPJ.</span>
-                  </span>
-                </button>
-              </li>
-            )}
-          </ul>
-        )}
+              {podeCriarEmpresa && (
+                <li className={temEmpresas ? styles.itemNovaWrap : styles.itemNovaWrapDestaque}>
+                  <button type="button" className={styles.itemNova} onClick={abrirModalCriacao}>
+                    <span className={styles.itemNovaIcone} aria-hidden>+</span>
+                    <span className={styles.itemTexto}>
+                      <span className={styles.itemNome}>{temEmpresas ? 'Nova empresa' : 'Criar empresa'}</span>
+                      <span className={styles.itemDetalhe}>Só precisa do nome e do CNPJ.</span>
+                    </span>
+                  </button>
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
       </main>
 
       {modalModo && (

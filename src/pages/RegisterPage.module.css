@@ -1,90 +1,82 @@
-/* ── Full-screen container ───────────────────────────────────────────────── */
+/* Tela de acesso por convite (completar cadastro) — página grafite com brilho
+   dourado no topo, marca DFC Scale centralizada e cartão marfim.
+   Cores fixas (não dependem do tema do site). Mesmo visual de LoginPage.module.css. */
+
+/* ── Página inteira ─────────────────────────────────────────────────────── */
 .container {
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--bg);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Radial gold glow at top center */
-.container::before {
-  content: '';
-  position: absolute;
-  top: -120px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(ellipse, #c9a22a0d 0%, transparent 65%);
-  pointer-events: none;
-}
-
-/* Subtle grid pattern */
-.container::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(201, 162, 42, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(201, 162, 42, 0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
-}
-
-/* ── Card ────────────────────────────────────────────────────────────────── */
-.card {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 440px;
-  padding: 44px 44px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
-  gap: 28px;
-}
-
-/* ── Logo ────────────────────────────────────────────────────────────────── */
-.logo {
-  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  padding: 56px 16px 48px;
+  background:
+    radial-gradient(ellipse 70% 42% at 50% -6%, rgba(194, 160, 99, 0.2) 0%, rgba(194, 160, 99, 0) 70%),
+    #16140f;
+  color: #f4efe3;
+  font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif;
+  overflow-x: clip;
 }
 
-.logoImg {
-  height: 30px;
-  width: auto;
-  object-fit: contain;
+.container :where(input, button) {
+  font: inherit;
 }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
+/* ── Marca ──────────────────────────────────────────────────────────────── */
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 32px;
+  font-size: 17px;
+  color: #f4efe3;
+  white-space: nowrap;
+}
+.marca img { display: block; }
+.marca b { font-weight: 700; }
+
+/* ── Cartão marfim ──────────────────────────────────────────────────────── */
+.card {
+  width: 100%;
+  max-width: 460px;
+  padding: 32px;
+  background: #f4efe3;
+  color: #16140f;
+  border-radius: 16px;
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.55),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Cabeçalho ──────────────────────────────────────────────────────────── */
 .formHeader {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  text-align: center;
+  gap: 8px;
 }
 
 .title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.5px;
+  margin: 0;
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: #16140f;
 }
 
 .subtitle {
-  font-size: 14px;
-  color: var(--text-muted);
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #5f5a4e;
 }
 
-/* ── Form ────────────────────────────────────────────────────────────────── */
+/* ── Formulário ─────────────────────────────────────────────────────────── */
 .form {
   display: flex;
   flex-direction: column;
@@ -98,9 +90,9 @@
 }
 
 .label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  color: #888;
+  color: #3a362c;
 }
 
 .inputWrapper {
@@ -112,160 +104,235 @@
 .inputIcon {
   position: absolute;
   left: 14px;
-  color: var(--text-muted);
+  color: #8a8476;
   pointer-events: none;
   flex-shrink: 0;
 }
 
 .input {
   width: 100%;
-  padding: 12px 14px 12px 44px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-size: 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  min-height: 48px;
+  padding: 12px 14px 12px 42px;
+  background: #ffffff;
+  border: 1px solid rgba(22, 20, 15, 0.16);
+  border-radius: 10px;
+  color: #16140f;
+  font-size: 15px;
+  transition: border-color 0.15s, box-shadow 0.15s;
   outline: none;
 }
 
+/* Campo com botão de mostrar/ocultar senha: espaço à direita para o ícone. */
+.inputWrapper:has(.togglePassword) .input {
+  padding-right: 48px;
+}
+
 .input::placeholder {
-  color: var(--text-dim);
+  color: #6f6a5d; /* 5,39:1 sobre #fff (AA) */
 }
 
 .input:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px var(--gold-glow);
+  border-color: #84621d;
+  box-shadow: 0 0 0 3px rgba(194, 160, 99, 0.35);
+}
+
+.input:read-only {
+  background: #f8f5ec;
+  color: #5f5a4e;
 }
 
 .togglePassword {
   position: absolute;
-  right: 14px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
+  right: 8px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   padding: 0;
-  transition: color 0.2s;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: #5f5a4e;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
 }
 
 .togglePassword:hover {
-  color: var(--gold);
+  color: #16140f;
+  background: rgba(22, 20, 15, 0.06);
 }
 
-/* ── Messages ────────────────────────────────────────────────────────────── */
-.errorMsg {
+/* "Esqueci minha senha" — alinhado à direita, abaixo do campo de senha. */
+.forgotLink {
+  align-self: flex-end;
+  padding: 2px 0;
+  background: none;
+  border: none;
   font-size: 13px;
-  color: #e05555;
-  background: rgba(224, 85, 85, 0.08);
-  border: 1px solid rgba(224, 85, 85, 0.2);
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
+  font-weight: 600;
+  color: #84621d;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color 0.15s;
 }
 
+.forgotLink:hover {
+  color: #5e4512;
+}
+
+/* ── Mensagens ──────────────────────────────────────────────────────────── */
+.errorMsg,
+.infoMsg,
 .successMsg {
-  font-size: 13px;
-  color: #55c47a;
-  background: rgba(85, 196, 122, 0.08);
-  border: 1px solid rgba(85, 196, 122, 0.2);
+  margin: 0;
   padding: 10px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
-/* ── Submit ──────────────────────────────────────────────────────────────── */
+.errorMsg {
+  color: #9a3b2c;
+  background: #f8e7e3;
+  border: 1px solid rgba(154, 59, 44, 0.22);
+}
+
+.infoMsg {
+  color: #2e5a66;
+  background: #e2eef1;
+  border: 1px solid rgba(46, 90, 102, 0.2);
+}
+
+.successMsg {
+  color: #1c4a3d;
+  background: #e6f0ea;
+  border: 1px solid rgba(28, 74, 61, 0.2);
+}
+
+/* ── Botões ─────────────────────────────────────────────────────────────── */
 .submitButton {
   width: 100%;
+  min-height: 48px;
   padding: 13px;
-  background: linear-gradient(135deg, var(--gold-light), var(--gold-dark));
-  color: #080808;
-  font-size: 14px;
+  background: #16140f;
+  color: #f4efe3;
+  font-size: 15px;
   font-weight: 700;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   cursor: pointer;
-  letter-spacing: 0.3px;
-  transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
-  box-shadow: 0 4px 20px var(--gold-glow);
+  transition: background 0.15s, transform 0.1s;
 }
 
 .submitButton:hover {
-  opacity: 0.9;
-  box-shadow: 0 6px 28px #c9a22a55;
+  background: #2c281f;
 }
 
 .submitButton:active {
-  transform: scale(0.98);
+  transform: scale(0.99);
 }
 
 .submitButton:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
   transform: none;
+  background: #16140f;
 }
 
-/* ── Footer ──────────────────────────────────────────────────────────────── */
+.secondaryButton {
+  width: 100%;
+  min-height: 48px;
+  padding: 13px;
+  background: #ffffff;
+  color: #16140f;
+  font-size: 15px;
+  font-weight: 600;
+  border: 1px solid rgba(22, 20, 15, 0.16);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.secondaryButton:hover {
+  border-color: rgba(22, 20, 15, 0.34);
+  background: #fbf9f4;
+}
+
+.secondaryButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.stackActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Rodapé do cartão ───────────────────────────────────────────────────── */
+.footer {
+  padding-top: 20px;
+  border-top: 1px solid #e3dccb;
+  display: flex;
+  justify-content: center;
+}
+
 .footerText {
-  font-size: 13px;
-  color: var(--text-muted);
+  margin: 0;
+  font-size: 14px;
+  color: #5f5a4e;
   text-align: center;
 }
 
-.loginLink {
-  color: var(--gold);
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
+.registerLink,
+.loginLink,
+.voltarLink {
+  padding: 2px 0;
   background: none;
   border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #84621d;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   cursor: pointer;
-  font-size: 13px;
-  padding: 0;
+  transition: color 0.15s;
 }
 
-.loginLink:hover {
-  color: var(--gold-light);
+.registerLink:hover,
+.loginLink:hover,
+.voltarLink:hover {
+  color: #5e4512;
 }
 
-/* ── Mobile ──────────────────────────────────────────────────────────────── */
+/* ── Foco visível ───────────────────────────────────────────────────────── */
+.card :where(button):focus-visible {
+  outline: 2px solid #16140f;
+  outline-offset: 2px;
+}
+
+/* ── Celular ────────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .container {
-    align-items: flex-start;
-    padding: 0;
+    padding: 36px 16px 32px;
+  }
+
+  .marca {
+    margin-bottom: 24px;
   }
 
   .card {
-    max-width: 100%;
-    min-height: 100dvh;
-    border-radius: 0;
-    border: none;
-    padding: 48px 24px 40px;
-    gap: 24px;
-    justify-content: center;
-  }
-
-  .logoImg {
-    height: 32px;
+    padding: 28px 20px;
+    gap: 22px;
   }
 
   .title {
-    font-size: 22px;
+    font-size: 26px;
   }
 
   .input {
-    padding: 14px 14px 14px 44px;
-    font-size: 16px; /* prevents iOS auto-zoom */
-  }
-
-  .submitButton {
-    padding: 15px;
-    font-size: 15px;
-  }
-
-  .togglePassword {
-    padding: 8px;
-    right: 8px;
+    font-size: 16px; /* evita o zoom automático do iOS */
   }
 }

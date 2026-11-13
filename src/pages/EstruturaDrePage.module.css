@@ -1,13 +1,14 @@
-/* Estrutura do DRE — usa as variáveis --cs-* definidas em PerfilAdminPage.module.css (.page). */
+/* Estrutura do DRE — corpo marfim. Usa os tokens (--tinta, --borda, --link…)
+   definidos em PerfilAdminPage.module.css (.page), importado como "base". */
 
-.conteudo { max-width: 920px; }
+.page { --coluna: 920px; }
 
-/* ── Segmentos ── */
+/* ── Segmentos (abas em pílula; a ativa é grafite) ── */
 .segmentos {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .segmento,
@@ -15,7 +16,6 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font: inherit;
   font-size: 14px;
   font-weight: 600;
   border-radius: 999px;
@@ -25,38 +25,37 @@
 }
 
 .segmento {
-  color: var(--cs-texto-2);
-  background: transparent;
-  border: 1px solid var(--cs-linha);
+  color: var(--tinta-2);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
 }
 
-.segmento:hover { color: var(--cs-marfim); border-color: rgba(244, 239, 227, 0.28); }
+.segmento:hover { color: var(--tinta); border-color: var(--borda-campo); }
 
-.segmentoAtivo {
-  color: var(--cs-grafite);
-  background: var(--cs-dourado);
-  border-color: var(--cs-dourado);
+.segmentoAtivo,
+.segmentoAtivo:hover {
+  color: #f4efe3;
+  background: var(--tinta);
+  border-color: var(--tinta);
 }
-
-.segmentoAtivo:hover { color: var(--cs-grafite); border-color: var(--cs-dourado); }
 
 .segmentoTag {
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  opacity: 0.75;
 }
 
 .segmentoNovo {
-  color: var(--cs-dourado);
+  color: var(--link);
   background: transparent;
-  border: 1px dashed rgba(194, 160, 99, 0.5);
+  border: 1px dashed rgba(132, 98, 29, 0.55);
 }
 
-.segmentoNovo:hover { background: rgba(194, 160, 99, 0.08); }
+.segmentoNovo:hover:not(:disabled) { background: var(--aviso-bg); }
+.segmentoNovo:disabled { opacity: 0.5; cursor: default; }
 
-/* ── Árvore do DRE ── */
+/* ── Árvore do DRE (cartões brancos) ── */
 .arvore {
   list-style: none;
   margin: 18px 0 0;
@@ -67,9 +66,9 @@
 }
 
 .linha {
-  border: 1px solid var(--cs-linha);
+  border: 1px solid var(--borda);
   border-radius: 14px;
-  background: rgba(244, 239, 227, 0.02);
+  background: var(--superficie);
   padding: 16px 18px;
 }
 
@@ -91,8 +90,8 @@
   font-weight: 700;
 }
 
-.sinalMais { color: #6fc2a3; background: rgba(28, 74, 61, 0.45); }
-.sinalMenos { color: var(--cs-champagne); background: rgba(244, 239, 227, 0.06); }
+.sinalMais { color: var(--sucesso); background: var(--sucesso-bg); }
+.sinalMenos { color: var(--erro); background: var(--erro-bg); }
 
 .linhaTexto { flex: 1; min-width: 0; }
 
@@ -101,21 +100,23 @@
   font-family: 'Sora', 'Hanken Grotesk', sans-serif;
   font-size: 16px;
   font-weight: 600;
-  color: var(--cs-marfim);
+  letter-spacing: -0.01em;
+  color: var(--tinta);
 }
 
 .linhaDescricao {
   margin: 3px 0 0;
   font-size: 13px;
   line-height: 1.5;
-  color: var(--cs-texto-2);
+  color: var(--tinta-2);
 }
 
 .linhaContagem {
   flex-shrink: 0;
   font-size: 12px;
-  color: var(--cs-texto-3);
-  padding-top: 3px;
+  font-weight: 600;
+  color: var(--tinta-2);
+  padding-top: 4px;
 }
 
 .contas {
@@ -127,28 +128,30 @@
 }
 
 .conta {
-  padding: 9px 0;
-  border-top: 1px solid var(--cs-linha);
+  padding: 10px 0;
+  border-top: 1px solid var(--borda-suave);
 }
 
 .contaTopo {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 6px 12px;
   flex-wrap: wrap;
 }
 
 .contaNome {
+  min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--cs-marfim);
+  color: var(--tinta);
+  overflow-wrap: anywhere;
 }
 
 .contaInativa .contaNome {
-  color: var(--cs-texto-3);
+  color: var(--tinta-2);
   text-decoration: line-through;
-  text-decoration-color: rgba(244, 239, 227, 0.3);
+  text-decoration-color: rgba(22, 20, 15, 0.35);
 }
 
 .tagInativa {
@@ -157,32 +160,38 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--cs-erro);
+  color: var(--erro);
+  background: var(--erro-bg);
+  border: 1px solid var(--erro-borda);
+  border-radius: 999px;
+  padding: 1px 7px;
   text-decoration: none;
   display: inline-block;
 }
 
 .contaAcoes {
   display: inline-flex;
-  gap: 14px;
+  gap: 16px;
 }
 
 .linkAcao {
-  font: inherit;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--cs-dourado);
+  color: var(--link);
   background: none;
   border: none;
+  border-radius: 4px;
   padding: 2px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   cursor: pointer;
 }
 
-.linkAcao:hover { color: var(--cs-champagne); text-decoration: underline; }
-.linkAcao:disabled { opacity: 0.4; cursor: default; text-decoration: none; }
+.linkAcao:hover:not(:disabled) { color: var(--link-forte); }
+.linkAcao:disabled { opacity: 0.45; cursor: default; text-decoration: none; }
 
 .palavras {
-  margin: 6px 0 0;
+  margin: 7px 0 0;
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
@@ -192,74 +201,76 @@
 .chipMais {
   font-size: 11.5px;
   line-height: 1;
-  padding: 4px 8px;
+  padding: 5px 9px;
   border-radius: 999px;
-  color: var(--cs-texto-2);
-  background: rgba(244, 239, 227, 0.05);
-  border: 1px solid var(--cs-linha);
+  color: var(--tinta-2);
+  background: var(--marfim);
+  border: 1px solid var(--borda);
+  overflow-wrap: anywhere;
 }
 
-.chipMais { cursor: default; color: var(--cs-dourado); }
+.chipMais { cursor: default; font-weight: 700; color: var(--link); }
 
 .semPalavras {
-  margin: 4px 0 0;
+  margin: 5px 0 0;
   font-size: 12px;
-  color: var(--cs-texto-3);
+  color: var(--tinta-2);
 }
 
 .adicionar {
   margin: 10px 0 0 38px;
-  font: inherit;
   font-size: 13px;
   font-weight: 600;
-  color: var(--cs-dourado);
+  color: var(--link);
   background: none;
-  border: 1px dashed rgba(194, 160, 99, 0.4);
+  border: 1px dashed rgba(132, 98, 29, 0.5);
   border-radius: 8px;
   padding: 7px 12px;
   cursor: pointer;
+  text-align: left;
 }
 
-.adicionar:hover { background: rgba(194, 160, 99, 0.07); }
-.adicionar:disabled { opacity: 0.4; cursor: default; }
+.adicionar:hover:not(:disabled) { background: var(--aviso-bg); }
+.adicionar:disabled { opacity: 0.45; cursor: default; }
 
-/* ── Subtotais ── */
+/* ── Subtotais (dourado bem claro) ── */
 .subtotal {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px 12px;
-  padding: 10px 18px;
+  padding: 11px 18px;
   border-radius: 12px;
-  background: rgba(194, 160, 99, 0.08);
-  border: 1px solid rgba(194, 160, 99, 0.28);
+  background: #faf3e2;
+  border: 1px solid var(--aviso-borda);
 }
 
 .subtotalIgual {
-  font-weight: 700;
-  color: var(--cs-dourado);
+  font-weight: 800;
+  color: var(--link);
 }
 
 .subtotalRotulo {
   font-family: 'Sora', 'Hanken Grotesk', sans-serif;
   font-size: 15px;
-  font-weight: 600;
-  color: var(--cs-champagne);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--tinta);
 }
 
 .subtotalFormula {
   font-size: 12.5px;
-  color: var(--cs-texto-2);
+  color: var(--tinta-2);
 }
 
 /* ── Formulários do ADM ── */
 .formulario,
 .formPalavras {
   margin: 12px 0 0 38px;
-  padding: 14px;
+  padding: 16px;
   border-radius: 12px;
-  border: 1px solid rgba(194, 160, 99, 0.35);
-  background: rgba(194, 160, 99, 0.05);
+  border: 1px solid var(--borda);
+  background: var(--marfim-claro);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
@@ -267,41 +278,44 @@
 
 .formPalavras { grid-template-columns: 1fr; margin-left: 0; margin-top: 8px; }
 
-.segmentos + .formulario { margin-left: 0; }
+.segmentos + .formulario {
+  margin-left: 0;
+  background: var(--superficie);
+}
 
 .campoForm {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 12px;
+  min-width: 0;
+  font-size: 12.5px;
   font-weight: 600;
-  color: var(--cs-texto-2);
+  color: var(--tinta-2);
 }
 
 .campoForm input,
 .campoForm select,
 .campoForm textarea,
 .empresa select {
-  font: inherit;
+  min-width: 0;
   font-size: 14px;
   font-weight: 500;
-  color: var(--cs-marfim);
-  background: rgba(244, 239, 227, 0.04);
-  border: 1px solid rgba(244, 239, 227, 0.16);
-  border-radius: 9px;
-  padding: 9px 11px;
+  color: var(--tinta);
+  background: var(--superficie);
+  border: 1px solid var(--borda-campo);
+  border-radius: 10px;
+  padding: 10px 12px;
   resize: vertical;
 }
 
-.campoForm select option,
-.empresa select option { color: #16140f; }
+.campoForm input::placeholder,
+.campoForm textarea::placeholder { color: var(--tinta-2); opacity: 1; } /* 6,86:1 sobre #fff */
 
 .campoForm input:focus,
 .campoForm select:focus,
 .campoForm textarea:focus,
 .empresa select:focus {
-  outline: none;
-  border-color: rgba(194, 160, 99, 0.75);
+  border-color: var(--dourado);
 }
 
 .formAcoes {
@@ -312,31 +326,33 @@
 }
 
 .btnPrimario {
-  font: inherit;
   font-size: 14px;
   font-weight: 700;
-  color: var(--cs-grafite);
-  background: var(--cs-dourado);
-  border: none;
+  color: #f4efe3;
+  background: var(--tinta);
+  border: 1px solid var(--tinta);
   border-radius: 10px;
-  padding: 9px 16px;
+  padding: 10px 16px;
   cursor: pointer;
+  transition: background 0.15s;
 }
 
-.btnPrimario:hover { background: var(--cs-champagne); }
+.btnPrimario:hover { background: #2c281f; }
 
 .erroForm {
   grid-column: 1 / -1;
   margin: 0;
   font-size: 13px;
-  color: var(--cs-erro);
+  font-weight: 600;
+  color: var(--erro);
 }
 
 /* ── Segmento das empresas ── */
 .empresas {
   list-style: none;
-  margin: 12px 0 0;
+  margin: 14px 0 0;
   padding: 0;
+  border-bottom: 1px solid var(--borda);
 }
 
 .empresa {
@@ -344,15 +360,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px 0;
-  border-top: 1px solid var(--cs-linha);
+  padding: 12px 0;
+  border-top: 1px solid var(--borda);
 }
 
 .empresaNome {
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--cs-marfim);
+  color: var(--tinta);
+  overflow-wrap: anywhere;
 }
 
 .empresaCnpj {
@@ -360,25 +377,19 @@
   margin-top: 2px;
   font-size: 12px;
   font-weight: 400;
-  color: var(--cs-texto-3);
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-2);
 }
 
-.empresa select { min-width: 200px; }
-.empresa select:disabled { opacity: 0.55; }
-
-.segmento:focus-visible,
-.segmentoNovo:focus-visible,
-.linkAcao:focus-visible,
-.adicionar:focus-visible,
-.btnPrimario:focus-visible {
-  outline: 2px solid var(--cs-dourado);
-  outline-offset: 3px;
-}
+.empresa select { min-width: 220px; }
+.empresa select:disabled { opacity: 0.55; cursor: default; }
 
 @media (max-width: 720px) {
   .linha { padding: 14px; }
+  .linhaTopo { flex-wrap: wrap; }
   .contas, .adicionar, .formulario { margin-left: 0; }
   .formulario { grid-template-columns: 1fr; }
+  .subtotal { padding: 10px 14px; }
   .empresa { flex-direction: column; align-items: stretch; gap: 8px; }
   .empresa select { min-width: 0; }
 }

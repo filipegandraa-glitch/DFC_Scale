@@ -256,208 +256,220 @@ export default function PerfilAdminPage({ podeEditar, nomeUsuario, menuPerfil, o
 
   return (
     <div className={styles.page}>
-      <header className={styles.topo}>
-        <button type="button" className={styles.marca} onClick={sairCom(onVoltar)} aria-label="DFC Scale — voltar">
-          <img src="/symbol-gold.svg" alt="" className={styles.simbolo} />
-          <span>DFC <strong>Scale</strong></span>
-        </button>
-        <div className={styles.topoAcoes}>
-          <button type="button" className={styles.linkVoltar} onClick={sairCom(onVoltar)}>← Voltar</button>
-          {menuPerfil}
+      {/* ── Faixa escura: navegação e título ── */}
+      <header className={`${styles.faixa} tema-grafite`}>
+        <div className={styles.faixaGlow} aria-hidden />
+        <div className={styles.faixaConteudo}>
+          <div className={styles.nav}>
+            <button type="button" className={styles.marca} onClick={sairCom(onVoltar)} aria-label="DFC Scale — voltar">
+              <img src="/symbol-gold.svg" alt="" width={22} height={22} />
+              <span>DFC <b>Scale</b></span>
+            </button>
+            <div className={styles.navDir}>
+              <button type="button" className={styles.navLink} onClick={sairCom(onVoltar)}>← Voltar</button>
+              {menuPerfil}
+            </div>
+          </div>
+
+          <div className={styles.faixaCabeca}>
+            <p className={styles.eyebrow}>{podeEditar ? 'Perfil administrativo' : 'Perfil'}</p>
+            <h1 className={styles.titulo}>Referências do DRE</h1>
+            <p className={styles.apoio}>
+              Estas faixas valem para todas as empresas do DFC Scale. Elas definem quando cada linha do DRE
+              aparece como Ideal, Aceitável, Na média ou Atenção, sempre em percentual sobre o recebimento do mês.
+              {!podeEditar && ' Só administradores podem alterar estes valores.'}
+            </p>
+          </div>
         </div>
       </header>
 
-      <main className={styles.conteudo}>
-        <p className={styles.eyebrow}>{podeEditar ? 'Perfil administrativo' : 'Perfil'}</p>
-        <h1 className={styles.titulo}>Referências do DRE</h1>
-        <p className={styles.intro}>
-          Estas faixas valem para todas as empresas do DFC Scale. Elas definem quando cada linha do DRE
-          aparece como Ideal, Aceitável, Na média ou Atenção, sempre em percentual sobre o recebimento do mês.
-          {!podeEditar && ' Só administradores podem alterar estes valores.'}
-        </p>
+      {/* ── Corpo marfim ── */}
+      <main className={`${styles.corpo} tema-marfim`}>
+        <div className={styles.conteudo}>
 
-        {carregamento === 'carregando' && (
-          <div className={styles.carregando} role="status">
-            <span className={styles.spinner} aria-hidden />
-            Carregando as referências…
-          </div>
-        )}
+          {carregamento === 'carregando' && (
+            <div className={styles.carregando} role="status">
+              <span className={styles.spinner} aria-hidden />
+              Carregando as referências…
+            </div>
+          )}
 
-        {carregamento === 'erro' && (
-          <div className={styles.erroCarga} role="alert">
-            <p>Não foi possível carregar as referências{erroCarregamento ? `: ${erroCarregamento}` : '.'}</p>
-            <button type="button" className={styles.btnSecundario} onClick={() => void carregar()}>
-              Tentar de novo
-            </button>
-          </div>
-        )}
+          {carregamento === 'erro' && (
+            <div className={styles.erroCarga} role="alert">
+              <p>Não foi possível carregar as referências{erroCarregamento ? `: ${erroCarregamento}` : '.'}</p>
+              <button type="button" className={styles.btnSecundario} onClick={() => void carregar()}>
+                Tentar de novo
+              </button>
+            </div>
+          )}
 
-        {carregamento === 'pronto' && (
-          <>
-            <section className={styles.secao} aria-labelledby="faixas-titulo">
-              <div className={styles.secaoTopo}>
-                <h2 id="faixas-titulo" className={styles.secaoTitulo}>Faixas em vigor</h2>
-                {podeEditar && (
-                  <button
-                    type="button"
-                    className={styles.linkPadrao}
-                    onClick={voltarAoPadrao}
-                    disabled={analise.noPadrao || salvando}
-                  >
-                    Voltar ao padrão do método
-                  </button>
-                )}
-              </div>
-              <p className={styles.secaoTexto}>
-                Nas linhas de custo, quanto menor, melhor. Na margem de contribuição, quanto maior, melhor.
-                Entre Aceitável e Atenção fica a faixa intermediária (na média).{podeEditar && ' Nada muda até você salvar.'}
-              </p>
-
-              <div className={styles.tabela} role="group" aria-label="Faixas de cada linha do DRE">
-                <div className={styles.cabecalho} aria-hidden>
-                  <span className={styles.cabecalhoLinha}>Linha do DRE</span>
-                  {CAMPOS_LIMITE.map(campo => (
-                    <span key={campo} className={`${styles.chip} ${styles[`chip_${campo}`]}`}>
-                      {ROTULO_CAMPO[campo]}
-                    </span>
-                  ))}
-                </div>
-
-                {LINHAS_REFERENCIA.map(def => {
-                  const linha = analise.porLinha[def.id]
-                  const idErro = `erro-${def.id}`
-                  return (
-                    <div
-                      key={def.id}
-                      className={[
-                        styles.linha,
-                        def.destaque ? styles.linhaDestaque : '',
-                        linha.erro ? styles.linhaComErro : '',
-                        linhaEmFoco === def.id ? styles.linhaEmFoco : '',
-                      ].join(' ')}
-                      onFocusCapture={() => setLinhaEmFoco(def.id)}
+          {carregamento === 'pronto' && (
+            <>
+              <section className={styles.secao} aria-labelledby="faixas-titulo">
+                <div className={styles.secaoTopo}>
+                  <h2 id="faixas-titulo" className={styles.secaoTitulo}>Faixas em vigor</h2>
+                  {podeEditar && (
+                    <button
+                      type="button"
+                      className={styles.linkPadrao}
+                      onClick={voltarAoPadrao}
+                      disabled={analise.noPadrao || salvando}
                     >
-                      <div className={styles.linhaTexto}>
-                        <button
-                          type="button"
-                          className={styles.linhaRotulo}
-                          onClick={() => setLinhaEmFoco(def.id)}
-                          aria-label={`Ver como a faixa de ${def.rotulo} é lida`}
-                        >
-                          {def.rotulo}
-                          {linha.alterada && !linha.erro && <span className={styles.marcaAlterada}>alterada</span>}
-                        </button>
-                        <span className={styles.linhaComposicao}>{def.composicao}</span>
-                      </div>
+                      Voltar ao padrão do método
+                    </button>
+                  )}
+                </div>
+                <p className={styles.secaoTexto}>
+                  Nas linhas de custo, quanto menor, melhor. Na margem de contribuição, quanto maior, melhor.
+                  Entre Aceitável e Atenção fica a faixa intermediária (na média).{podeEditar && ' Nada muda até você salvar.'}
+                </p>
 
-                      {!podeEditar && CAMPOS_LIMITE.map(campo => (
-                        <div key={campo} className={styles.campo}>
-                          <span className={styles.campoRotuloMobile} aria-hidden>
-                            {ROTULO_CAMPO[campo]} · {prefixoLimite(campo, def.sentido)}
-                          </span>
-                          <span className={`${styles.campoCaixa} ${styles.campoLeitura}`}>
-                            <span className={styles.campoPrefixo} aria-hidden>{prefixoLimite(campo, def.sentido)}</span>
-                            <span className={styles.campoValor}>
-                              <span className={styles.srOnly}>{ROTULO_CAMPO[campo]}: {prefixoLimite(campo, def.sentido)} </span>
-                              {form[def.id][campo]}
-                            </span>
-                            <span className={styles.campoSufixo}>%</span>
-                          </span>
+                <div className={styles.tabela} role="group" aria-label="Faixas de cada linha do DRE">
+                  <div className={styles.cabecalho} aria-hidden>
+                    <span className={styles.cabecalhoLinha}>Linha do DRE</span>
+                    {CAMPOS_LIMITE.map(campo => (
+                      <span key={campo} className={`${styles.chip} ${styles[`chip_${campo}`]}`}>
+                        {ROTULO_CAMPO[campo]}
+                      </span>
+                    ))}
+                  </div>
+
+                  {LINHAS_REFERENCIA.map(def => {
+                    const linha = analise.porLinha[def.id]
+                    const idErro = `erro-${def.id}`
+                    return (
+                      <div
+                        key={def.id}
+                        className={[
+                          styles.linha,
+                          def.destaque ? styles.linhaDestaque : '',
+                          linha.erro ? styles.linhaComErro : '',
+                          linhaEmFoco === def.id ? styles.linhaEmFoco : '',
+                        ].join(' ')}
+                        onFocusCapture={() => setLinhaEmFoco(def.id)}
+                      >
+                        <div className={styles.linhaTexto}>
+                          <button
+                            type="button"
+                            className={styles.linhaRotulo}
+                            onClick={() => setLinhaEmFoco(def.id)}
+                            aria-label={`Ver como a faixa de ${def.rotulo} é lida`}
+                          >
+                            {def.rotulo}
+                            {linha.alterada && !linha.erro && <span className={styles.marcaAlterada}>alterada</span>}
+                          </button>
+                          <span className={styles.linhaComposicao}>{def.composicao}</span>
                         </div>
-                      ))}
 
-                      {podeEditar && CAMPOS_LIMITE.map(campo => {
-                        const invalido = linha.camposInvalidos.includes(campo)
-                        return (
-                          <label key={campo} className={`${styles.campo} ${invalido ? styles.campoInvalido : ''}`}>
+                        {!podeEditar && CAMPOS_LIMITE.map(campo => (
+                          <div key={campo} className={styles.campo}>
                             <span className={styles.campoRotuloMobile} aria-hidden>
                               {ROTULO_CAMPO[campo]} · {prefixoLimite(campo, def.sentido)}
                             </span>
-                            <span className={styles.campoCaixa}>
-                              <span className={styles.campoPrefixo}>{prefixoLimite(campo, def.sentido)}</span>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                autoComplete="off"
-                                className={styles.campoInput}
-                                value={form[def.id][campo]}
-                                onChange={e => alterarCampo(def.id, campo, e.target.value)}
-                                onBlur={() => padronizarCampo(def.id, campo)}
-                                aria-label={`${def.rotulo}, ${ROTULO_CAMPO[campo]}: ${prefixoLimite(campo, def.sentido)} quantos por cento`}
-                                aria-invalid={invalido || undefined}
-                                aria-describedby={linha.erro ? idErro : undefined}
-                                disabled={salvando}
-                              />
-                              <span className={styles.campoSufixo} aria-hidden>%</span>
+                            <span className={`${styles.campoCaixa} ${styles.campoLeitura}`}>
+                              <span className={styles.campoPrefixo} aria-hidden>{prefixoLimite(campo, def.sentido)}</span>
+                              <span className={styles.campoValor}>
+                                <span className={styles.srOnly}>{ROTULO_CAMPO[campo]}: {prefixoLimite(campo, def.sentido)} </span>
+                                {form[def.id][campo]}
+                              </span>
+                              <span className={styles.campoSufixo}>%</span>
                             </span>
-                          </label>
-                        )
-                      })}
+                          </div>
+                        ))}
 
-                      {linha.erro && (
-                        <p id={idErro} className={styles.linhaErro}>{linha.erro}</p>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+                        {podeEditar && CAMPOS_LIMITE.map(campo => {
+                          const invalido = linha.camposInvalidos.includes(campo)
+                          return (
+                            <label key={campo} className={`${styles.campo} ${invalido ? styles.campoInvalido : ''}`}>
+                              <span className={styles.campoRotuloMobile} aria-hidden>
+                                {ROTULO_CAMPO[campo]} · {prefixoLimite(campo, def.sentido)}
+                              </span>
+                              <span className={styles.campoCaixa}>
+                                <span className={styles.campoPrefixo}>{prefixoLimite(campo, def.sentido)}</span>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  autoComplete="off"
+                                  className={styles.campoInput}
+                                  value={form[def.id][campo]}
+                                  onChange={e => alterarCampo(def.id, campo, e.target.value)}
+                                  onBlur={() => padronizarCampo(def.id, campo)}
+                                  aria-label={`${def.rotulo}, ${ROTULO_CAMPO[campo]}: ${prefixoLimite(campo, def.sentido)} quantos por cento`}
+                                  aria-invalid={invalido || undefined}
+                                  aria-describedby={linha.erro ? idErro : undefined}
+                                  disabled={salvando}
+                                />
+                                <span className={styles.campoSufixo} aria-hidden>%</span>
+                              </span>
+                            </label>
+                          )
+                        })}
 
-              {!podeEditar && (
-                <p className={styles.metaLeitura}>
-                  {versao
-                    ? `Última alteração em ${formatarDataHora(versao)}${autor ? `, por ${autor}` : ''}.`
-                    : 'Valores padrão do método.'}
+                        {linha.erro && (
+                          <p id={idErro} className={styles.linhaErro}>{linha.erro}</p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {!podeEditar && (
+                  <p className={styles.metaLeitura}>
+                    {versao
+                      ? `Última alteração em ${formatarDataHora(versao)}${autor ? `, por ${autor}` : ''}.`
+                      : 'Valores padrão do método.'}
+                  </p>
+                )}
+              </section>
+
+              <section className={styles.secao} aria-labelledby="leitura-titulo">
+                <h2 id="leitura-titulo" className={styles.secaoTitulo}>Como a faixa é lida</h2>
+                <p className={styles.secaoTexto}>
+                  <strong className={styles.focoRotulo}>{defFoco.rotulo}</strong>
+                  {' · '}
+                  {defFoco.sentido === 'maior' ? 'quanto maior, melhor' : 'quanto menor, melhor'}.
+                  Clique numa linha para ver a leitura dela.
                 </p>
-              )}
-            </section>
 
-            <section className={styles.secao} aria-labelledby="leitura-titulo">
-              <h2 id="leitura-titulo" className={styles.secaoTitulo}>Como a faixa é lida</h2>
-              <p className={styles.secaoTexto}>
-                <strong className={styles.focoRotulo}>{defFoco.rotulo}</strong>
-                {' · '}
-                {defFoco.sentido === 'maior' ? 'quanto maior, melhor' : 'quanto menor, melhor'}.
-                Clique numa linha para ver a leitura dela.
-              </p>
+                {limitesFoco ? (
+                  <>
+                    <div className={styles.barra} aria-hidden>
+                      {trechosDaBarra(defFoco, limitesFoco).map(t => (
+                        <span key={t.faixa} className={`${styles.barraTrecho} ${styles[`fundo_${t.faixa}`]}`} style={{ width: `${t.largura}%` }} />
+                      ))}
+                    </div>
+                    <ul className={styles.legenda}>
+                      {trechosDasFaixas(defFoco, limitesFoco).map(t => (
+                        <li key={t.faixa} className={styles.legendaItem}>
+                          <span className={`${styles.legendaPonto} ${styles[`fundo_${t.faixa}`]}`} aria-hidden />
+                          <span className={styles.legendaNome}>{ROTULO_FAIXA[t.faixa]}</span>
+                          <span className={styles.legendaValor}>{t.texto}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p className={styles.semPrevia}>Corrija os valores desta linha para ver a leitura das faixas.</p>
+                )}
+              </section>
 
-              {limitesFoco ? (
-                <>
-                  <div className={styles.barra} aria-hidden>
-                    {trechosDaBarra(defFoco, limitesFoco).map(t => (
-                      <span key={t.faixa} className={`${styles.barraTrecho} ${styles[`fundo_${t.faixa}`]}`} style={{ width: `${t.largura}%` }} />
-                    ))}
-                  </div>
-                  <ul className={styles.legenda}>
-                    {trechosDasFaixas(defFoco, limitesFoco).map(t => (
-                      <li key={t.faixa} className={styles.legendaItem}>
-                        <span className={`${styles.legendaPonto} ${styles[`fundo_${t.faixa}`]}`} aria-hidden />
-                        <span className={styles.legendaNome}>{ROTULO_FAIXA[t.faixa]}</span>
-                        <span className={styles.legendaValor}>{t.texto}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <p className={styles.semPrevia}>Corrija os valores desta linha para ver a leitura das faixas.</p>
-              )}
-            </section>
-
-            <section className={styles.secao} aria-labelledby="calculo-titulo">
-              <h2 id="calculo-titulo" className={styles.secaoTitulo}>Como calcular</h2>
-              <ul className={styles.regras}>
-                <li>Cada linha: valor da linha ÷ recebimento do mês × 100.</li>
-                <li>
-                  Margem de contribuição: recebimento menos as linhas de canceladas até royalties,
-                  ÷ recebimento × 100. Na DFC ela é a mesma margem dos indicadores.
-                </li>
-                <li>
-                  Exemplo: recebimento de R$ 100.000 no mês e R$ 1.200 de tarifa de cartão dão 1,2%
-                  do recebimento, e é esse 1,2% que entra na faixa da linha.
-                </li>
-              </ul>
-            </section>
-          </>
-        )}
+              <section className={styles.secao} aria-labelledby="calculo-titulo">
+                <h2 id="calculo-titulo" className={styles.secaoTitulo}>Como calcular</h2>
+                <ul className={styles.regras}>
+                  <li>Cada linha: valor da linha ÷ recebimento do mês × 100.</li>
+                  <li>
+                    Margem de contribuição: recebimento menos as linhas de canceladas até royalties,
+                    ÷ recebimento × 100. Na DFC ela é a mesma margem dos indicadores.
+                  </li>
+                  <li>
+                    Exemplo: recebimento de R$ 100.000 no mês e R$ 1.200 de tarifa de cartão dão 1,2%
+                    do recebimento, e é esse 1,2% que entra na faixa da linha.
+                  </li>
+                </ul>
+              </section>
+            </>
+          )}
+        </div>
       </main>
 
       {podeEditar && carregamento === 'pronto' && (

@@ -96,9 +96,10 @@ body {
 
 /* ── Scrollbar global ────────────────────────────────────────────────────── */
 ::-webkit-scrollbar        { width: 5px; height: 5px; }
-::-webkit-scrollbar-track  { background: var(--bg); }
-::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+/* Neutra: serve tanto nas faixas escuras quanto no corpo marfim. */
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(138, 132, 118, 0.45); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(138, 132, 118, 0.7); }
 
 /* ── Modal animations ────────────────────────────────────────────────────── */
 @keyframes modalBdIn    { from { opacity: 0 }                                          to { opacity: 1 } }
