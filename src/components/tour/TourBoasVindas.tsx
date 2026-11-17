@@ -5,10 +5,12 @@ import styles from './TourBoasVindas.module.css'
 
 // Marca de "tour concluído" — guardada no user_metadata (vale em qualquer
 // navegador) e no localStorage (fallback imediato se a gravação falhar).
-const META_CHAVE = 'dfc_tour_concluido'
-const CHAVE_LOCAL = (userId: string) => `dfc_tour_concluido:${userId}`
+// Cada tour tem a sua chave: 'dfc_tour_concluido' (tela da DFC) e
+// 'dfc_tour_empresas_concluido' (escolha de empresa).
+const CHAVE_PADRAO = 'dfc_tour_concluido'
+const CHAVE_LOCAL = (chave: string, userId: string) => `${chave}:${userId}`
 // "Ver depois" adia só até a próxima sessão do navegador.
-const CHAVE_ADIADO = 'dfc_tour_adiado'
+const CHAVE_ADIADO = (chave: string) => chave === CHAVE_PADRAO ? 'dfc_tour_adiado' : `${chave}:adiado`
 
 function lerStorage(storage: Storage, chave: string) {
   try { return storage.getItem(chave) } catch { return null }
@@ -19,7 +21,7 @@ function gravarStorage(storage: Storage, chave: string, valor: string) {
 }
 
 /** Controla quando o tour aparece: no primeiro acesso de cada usuário. */
-export function useTourBoasVindas() {
+export function useTourBoasVindas(chave: string = CHAVE_PADRAO) {
   const [aberto, setAberto] = useState(false)
   const userIdRef = useRef<string | null>(null)
 
@@ -28,26 +30,26 @@ export function useTourBoasVindas() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!ativo || !user) return
       userIdRef.current = user.id
-      const concluido = Boolean(user.user_metadata?.[META_CHAVE])
-        || Boolean(lerStorage(localStorage, CHAVE_LOCAL(user.id)))
-      const adiado = Boolean(lerStorage(sessionStorage, CHAVE_ADIADO))
+      const concluido = Boolean(user.user_metadata?.[chave])
+        || Boolean(lerStorage(localStorage, CHAVE_LOCAL(chave, user.id)))
+      const adiado = Boolean(lerStorage(sessionStorage, CHAVE_ADIADO(chave)))
       if (!concluido && !adiado) setAberto(true)
     })
     return () => { ativo = false }
-  }, [])
+  }, [chave])
 
   const concluir = useCallback(() => {
     setAberto(false)
     const userId = userIdRef.current
     if (!userId) return
-    gravarStorage(localStorage, CHAVE_LOCAL(userId), '1')
-    void supabase.auth.updateUser({ data: { [META_CHAVE]: new Date().toISOString() } })
-  }, [])
+    gravarStorage(localStorage, CHAVE_LOCAL(chave, userId), '1')
+    void supabase.auth.updateUser({ data: { [chave]: new Date().toISOString() } })
+  }, [chave])
 
   const adiar = useCallback(() => {
     setAberto(false)
-    gravarStorage(sessionStorage, CHAVE_ADIADO, '1')
-  }, [])
+    gravarStorage(sessionStorage, CHAVE_ADIADO(chave), '1')
+  }, [chave])
 
   const abrir = useCallback(() => setAberto(true), [])
 

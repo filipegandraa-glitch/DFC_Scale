@@ -11,6 +11,8 @@ import {
 import styles from './EmpresaGatePage.module.css'
 import { useBackdropDismiss } from '../hooks/useBackdropDismiss'
 import { useToastErrorState } from '../hooks/useToastErrorState'
+import { useTourBoasVindas } from '../components/tour/TourBoasVindas'
+import { TOUR_EMPRESAS_CHAVE, TourEmpresas } from '../components/tour/TourEmpresas'
 
 interface Props {
   /** Chamado quando o usuário seleciona (ou cria e seleciona) uma empresa */
@@ -377,6 +379,8 @@ export default function EmpresaGatePage({
   const [ultimaEmpresaId] = useState<string | null>(() => {
     try { return localStorage.getItem(ULTIMA_EMPRESA_KEY) } catch { return null }
   })
+  // Tutorial do primeiro acesso a esta tela (só aparece depois de carregar a lista).
+  const tour = useTourBoasVindas(TOUR_EMPRESAS_CHAVE)
 
   const resetBackgroundPreview = (nextValue = '') => {
     setBackgroundPreview(current => {
@@ -956,13 +960,29 @@ export default function EmpresaGatePage({
         />
       )}
 
-      {onVerTermos && (
-        <footer className={styles.rodape}>
-          <button type="button" className={styles.linkTermos} onClick={onVerTermos}>
-            Termos de Uso e Política de Privacidade
-          </button>
-        </footer>
-      )}
+      <TourEmpresas
+        aberto={tour.aberto && !modalModo && !empresaParaDeletar}
+        onConcluir={tour.concluir}
+        onAdiar={tour.adiar}
+        podeCriar={podeCriarEmpresa}
+        empresaSugerida={empresasOrdenadas[0]?.nome ?? null}
+        onCriarEmpresa={abrirModalCriacao}
+        onAbrirEmpresa={() => { if (empresasOrdenadas[0]) selecionar(empresasOrdenadas[0]) }}
+      />
+
+      <footer className={styles.rodape}>
+        <button type="button" className={styles.linkTermos} onClick={tour.abrir}>
+          Como funciona esta tela
+        </button>
+        {onVerTermos && (
+          <>
+            <span className={styles.rodapeSeparador} aria-hidden>·</span>
+            <button type="button" className={styles.linkTermos} onClick={onVerTermos}>
+              Termos de Uso e Política de Privacidade
+            </button>
+          </>
+        )}
+      </footer>
     </div>
   )
 }

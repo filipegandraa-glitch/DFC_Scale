@@ -932,3 +932,9 @@
   .formActions .btnCriar,
   .formActions .btnExcluir { flex: 1 1 0; min-width: 0; padding-left: 12px; padding-right: 12px; }
 }
+
+.rodapeSeparador {
+  margin: 0 10px;
+  font-size: 13px;
+  color: #84621d;
+}
