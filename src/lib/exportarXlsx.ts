@@ -116,9 +116,10 @@ export async function exportarDfcCompleto(opcoes: {
 }) {
   const { empresa, periodo, colunas, linhas, arquivo } = opcoes
   const wb = await novaPlanilha()
-  const ws = wb.addWorksheet('DFC', {
-    properties: { outlineLevelRow: 1, outlineProperties: { summaryBelow: false, summaryRight: false } },
-  })
+  // Sem agrupamento de linhas (outline): a ExcelJS 4.4 grava <pageSetUpPr> antes
+  // de <outlinePr> dentro de <sheetPr>, fora da ordem do padrão, e o Excel não
+  // consegue abrir o arquivo quando os dois existem (o fitToPage gera o primeiro).
+  const ws = wb.addWorksheet('DFC')
   const totalColunas = 1 + colunas.length * 2
   const temTotal = colunas[colunas.length - 1] === 'Total'
 
@@ -183,8 +184,6 @@ export async function exportarDfcCompleto(opcoes: {
       rotulo.alignment = { indent: 2 }
       rotulo.font = fonte({ color: { argb: 'FF404040' } })
       for (let c = 1; c <= totalColunas; c++) ws.getCell(r, c).border = bordaInferior()
-      // Classificações ficam num nível de tópico abaixo do grupo, mas abertas
-      row.outlineLevel = 1
     }
   })
 
