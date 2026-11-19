@@ -1,0 +1,136 @@
+/* Menu lateral da Configuração geral, no corpo marfim (tokens de PerfilAdminPage.module.css). */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.titulo {
+  margin: 0 0 2px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tinta-2, #5f5a4e);
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--tinta-2, #5f5a4e);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.item:hover {
+  color: var(--tinta, #16140f);
+  background: rgba(22, 20, 15, 0.04);
+}
+
+.itemAtivo,
+.itemAtivo:hover {
+  color: var(--tinta, #16140f);
+  background: var(--superficie, #fff);
+  border-color: var(--borda, #e3dccb);
+  box-shadow: 0 1px 2px rgba(22, 20, 15, 0.05);
+  cursor: default;
+}
+
+/* Filete dourado no item aberto */
+.itemAtivo::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, #efe0b6, #7e6234);
+}
+
+.icone {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--tinta-3, #8a8476);
+}
+
+.itemAtivo .icone { color: #84621d; }
+
+.item:focus-visible {
+  outline: 2px solid var(--tinta, #16140f);
+  outline-offset: 2px;
+}
+
+/* Tela estreita: o menu vira uma faixa de botões acima do conteúdo. */
+@media (max-width: 960px) {
+  .titulo { display: none; }
+  .lista {
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .lista::-webkit-scrollbar { display: none; }
+  .item {
+    width: auto;
+    white-space: nowrap;
+    padding: 9px 14px;
+    border-color: var(--borda, #e3dccb);
+    border-radius: 999px;
+  }
+  .itemAtivo::before { display: none; }
+  .itemAtivo,
+  .itemAtivo:hover {
+    color: #f4efe3;
+    background: var(--tinta, #16140f);
+    border-color: var(--tinta, #16140f);
+  }
+  .itemAtivo .icone { color: #e8d9b5; }
+}
+
+/* ── Modo escuro ──
+   Os tokens (--tinta, --superficie, --borda…) vêm escuros do .page da
+   PerfilAdminPage; aqui só as cores fixas do menu. */
+:global(html[data-tema="escuro"]) .item:hover {
+  background: rgba(244, 239, 227, 0.05);
+}
+
+:global(html[data-tema="escuro"]) .itemAtivo,
+:global(html[data-tema="escuro"]) .itemAtivo:hover {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+:global(html[data-tema="escuro"]) .itemAtivo .icone {
+  color: var(--e-link);
+}
+
+/* Tela estreita: a pílula ativa vira marfim com texto tinta (inverte o grafite) */
+@media (max-width: 960px) {
+  :global(html[data-tema="escuro"]) .itemAtivo,
+  :global(html[data-tema="escuro"]) .itemAtivo:hover {
+    color: var(--e-botao-texto);
+    background: var(--e-botao-bg);
+    border-color: var(--e-botao-bg);
+  }
+  :global(html[data-tema="escuro"]) .itemAtivo .icone { color: #84621d; }
+}

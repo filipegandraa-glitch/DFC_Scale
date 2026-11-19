@@ -747,6 +747,61 @@
   .spinner { animation-duration: 2s; }
 }
 
+/* ── Configuração geral: menu lateral à esquerda ──
+   Sem menu (.comLateral ausente), .corpoGrade não muda nada no layout. O título da
+   faixa e a barra de salvar começam na mesma linha do conteúdo, à direita do menu. */
+.comLateral {
+  --lateral: 232px;
+  --lateral-gap: 48px;
+}
+
+.comLateral .faixaCabeca {
+  max-width: none;
+  margin: 0 0 0 calc(var(--lateral) + var(--lateral-gap));
+}
+
+.comLateral .corpoGrade {
+  display: grid;
+  grid-template-columns: var(--lateral) minmax(0, 1fr);
+  gap: var(--lateral-gap);
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.comLateral .corpoGrade > .conteudo {
+  max-width: var(--coluna, 880px);
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.lateral {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  padding-top: 30px;
+}
+
+.comLateral .barraSalvarInner {
+  max-width: 1280px;
+  padding-left: calc(32px + var(--lateral) + var(--lateral-gap));
+}
+
+@media (max-width: 960px) {
+  .comLateral .faixaCabeca { margin: 0; }
+  .comLateral .corpoGrade { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0; }
+  .comLateral .corpoGrade > .conteudo { max-width: none; padding: 24px 32px 56px; }
+  .lateral { position: static; padding: 20px 32px 0; }
+  .comLateral .barraSalvarInner { padding-left: 32px; }
+}
+
+@media (max-width: 720px) {
+  .comLateral .corpoGrade > .conteudo { padding: 20px 16px 40px; }
+  .lateral { padding: 16px 16px 0; }
+  .comLateral .barraSalvarInner { padding-left: 16px; }
+}
+
 .srOnly {
   position: absolute;
   width: 1px;
@@ -754,4 +809,91 @@
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* ── Modo escuro ──
+   Só o corpo marfim (e a barra de salvar) vira grafite; a faixa escura do topo
+   usa cores fixas e não lê nenhum destes tokens, então continua idêntica.
+   Os tokens trocados aqui valem também para Estrutura do DRE, Minha conta e
+   Funcionários, que importam este módulo como "base". */
+:global(html[data-tema="escuro"]) .page {
+  --tinta:        var(--e-texto);
+  --tinta-2:      var(--e-texto-2);
+  --tinta-3:      var(--e-texto-3);
+  --marfim:       var(--e-fundo);
+  --marfim-claro: var(--e-fundo-2);
+  --superficie:   var(--e-superficie);
+  --borda:        var(--e-borda);
+  --borda-suave:  var(--e-borda-suave);
+  --borda-campo:  var(--e-borda-campo);
+  --dourado:      var(--e-dourado);
+  --link:         var(--e-link);
+  --link-forte:   var(--e-link-forte);
+  --sucesso:      var(--e-sucesso);
+  --sucesso-bg:   var(--e-sucesso-bg);
+  --sucesso-borda:var(--e-sucesso-borda);
+  --erro:         var(--e-erro);
+  --erro-bg:      var(--e-erro-bg);
+  --erro-borda:   var(--e-erro-borda);
+  --aviso:        var(--e-aviso);
+  --aviso-bg:     var(--e-aviso-bg);
+  --aviso-borda:  var(--e-aviso-borda);
+  --info:         var(--e-info);
+  --info-bg:      var(--e-info-bg);
+
+  /* Faixas da prévia: tons mais claros para aparecer no grafite (mesmos do selo) */
+  --faixa-ideal:     #5cc8a8;
+  --faixa-aceitavel: #e6c869;
+  --faixa-media:     #8e8778;
+  --faixa-atencao:   #ef8a5e;
+}
+
+:global(html[data-tema="escuro"]) .spinner {
+  border-color: rgba(244, 239, 227, 0.14);
+  border-top-color: var(--link);
+}
+
+:global(html[data-tema="escuro"]) .linhaDestaque {
+  background: var(--e-dourado-bg);
+}
+
+:global(html[data-tema="escuro"]) .campoInput::placeholder {
+  color: var(--e-texto-3);
+}
+
+:global(html[data-tema="escuro"]) .campoLeitura {
+  border-color: rgba(244, 239, 227, 0.24);
+}
+
+:global(html[data-tema="escuro"]) .campoInvalido .campoCaixa {
+  background: var(--e-erro-bg);
+}
+
+/* Barra de salvar fixa: superfície grafite com sombra para cima */
+:global(html[data-tema="escuro"]) .barraSalvar {
+  background: var(--e-superficie);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Botão principal: no escuro inverte (fundo marfim, texto tinta) */
+:global(html[data-tema="escuro"]) .btnSalvar {
+  color: var(--e-botao-texto);
+  background: var(--e-botao-bg);
+  border-color: var(--e-botao-bg);
+}
+
+:global(html[data-tema="escuro"]) .btnSalvar:hover:not(:disabled) {
+  background: var(--e-botao-hover);
+  border-color: var(--e-botao-hover);
+}
+
+:global(html[data-tema="escuro"]) .btnSalvar:disabled {
+  background: var(--e-elevado);
+  border-color: var(--e-borda-forte);
+  color: var(--e-texto-3);
+}
+
+:global(html[data-tema="escuro"]) .btnSecundario:hover {
+  border-color: rgba(244, 239, 227, 0.38);
+  background: var(--e-hover);
 }

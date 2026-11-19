@@ -1,0 +1,35 @@
+/* Botão sol/lua: mesmo traço da pílula do menu de perfil, na faixa escura do topo. */
+
+.grupo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 239, 227, 0.18);
+  background: rgba(255, 255, 255, 0.02);
+  color: #ece6d6;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.botao:hover {
+  color: #c2a063;
+  border-color: rgba(244, 239, 227, 0.38);
+  background: rgba(244, 239, 227, 0.05);
+}
+
+.botao:focus-visible {
+  outline: 2px solid #c2a063;
+  outline-offset: 2px;
+}

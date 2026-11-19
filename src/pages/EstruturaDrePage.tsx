@@ -30,6 +30,8 @@ interface Props {
   podeEditar: boolean
   nomeUsuario: string
   menuPerfil?: ReactNode
+  /** Menu lateral da Configuração geral (Referências, Estrutura...), à esquerda do conteúdo. */
+  abas?: ReactNode
   onVoltar: () => void
   registrarGuardaSaida?: (guarda: (() => boolean) | null) => void
 }
@@ -63,7 +65,7 @@ function comSegmento(estrutura: EstruturaDre, segmentoId: string, mudar: (s: Seg
 const comConta = (s: SegmentoDre, nome: string, mudar: (c: ContaDre) => ContaDre): SegmentoDre =>
   ({ ...s, contas: s.contas.map(c => (c.nome === nome ? mudar(c) : c)) })
 
-export default function EstruturaDrePage({ podeEditar, nomeUsuario, menuPerfil, onVoltar, registrarGuardaSaida }: Props) {
+export default function EstruturaDrePage({ podeEditar, nomeUsuario, menuPerfil, abas, onVoltar, registrarGuardaSaida }: Props) {
   const [carregamento, setCarregamento] = useState<'carregando' | 'pronto' | 'erro'>('carregando')
   const [erroCarregamento, setErroCarregamento] = useState('')
   const [salva, setSalva] = useState<EstruturaDre>(() => clonarEstrutura(ESTRUTURA_PADRAO))
@@ -249,7 +251,7 @@ export default function EstruturaDrePage({ podeEditar, nomeUsuario, menuPerfil, 
   const subtotalDepois = (linha: LinhaDreId) => SUBTOTAIS_DRE.find(s => s.depoisDe === linha)
 
   return (
-    <div className={`${base.page} ${styles.page}`}>
+    <div className={`${base.page} ${styles.page} ${abas ? base.comLateral : ''}`}>
       {/* ── Faixa escura: navegação e título ── */}
       <header className={`${base.faixa} tema-grafite`}>
         <div className={base.faixaGlow} aria-hidden />
@@ -266,7 +268,7 @@ export default function EstruturaDrePage({ podeEditar, nomeUsuario, menuPerfil, 
           </div>
 
           <div className={base.faixaCabeca}>
-            <p className={base.eyebrow}>{podeEditar ? 'Perfil administrativo' : 'Perfil'}</p>
+            <p className={base.eyebrow}>Configuração geral</p>
             <h1 className={base.titulo}>Estrutura do DRE</h1>
             <p className={base.apoio}>
               O DRE gerencial tem as mesmas linhas para todas as empresas. Dentro de cada linha ficam as contas do
@@ -281,6 +283,8 @@ export default function EstruturaDrePage({ podeEditar, nomeUsuario, menuPerfil, 
 
       {/* ── Corpo marfim ── */}
       <main className={`${base.corpo} tema-marfim`}>
+        <div className={base.corpoGrade}>
+        {abas && <aside className={base.lateral}>{abas}</aside>}
         <div className={base.conteudo}>
 
           {carregamento === 'carregando' && (
@@ -539,6 +543,7 @@ export default function EstruturaDrePage({ podeEditar, nomeUsuario, menuPerfil, 
               )}
             </>
           )}
+        </div>
         </div>
       </main>
 

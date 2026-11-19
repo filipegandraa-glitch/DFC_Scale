@@ -45,3 +45,16 @@
 .faixa_aceitavel { color: var(--faixa-aceitavel-cor); background: var(--faixa-aceitavel-fundo); }
 .faixa_media { color: var(--faixa-media-cor); background: transparent; box-shadow: inset 0 0 0 1px var(--faixa-media-cor); }
 .faixa_atencao { color: var(--faixa-atencao-cor); background: var(--faixa-atencao-fundo); box-shadow: inset 0 0 0 1.5px var(--faixa-atencao-cor); }
+
+/* ── Modo escuro ──
+   O selo no corpo marfim que virou grafite: usa os tons claros (os mesmos da
+   área escura), que passam de 4.5:1 sobre o grafite e os fundos dos KPIs. */
+:global(html[data-tema="escuro"] .tema-marfim) .selo {
+  --faixa-ideal-cor:     #5cc8a8;
+  --faixa-ideal-fundo:   rgba(92, 200, 168, 0.14);
+  --faixa-aceitavel-cor: #e6c869;
+  --faixa-aceitavel-fundo: rgba(230, 200, 105, 0.14);
+  --faixa-media-cor:     #b5b0a3;
+  --faixa-atencao-cor:   #ef8a5e;
+  --faixa-atencao-fundo: rgba(236, 132, 88, 0.16);
+}

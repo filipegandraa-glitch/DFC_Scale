@@ -28,7 +28,7 @@ interface Props {
   menuPerfil?: ReactNode
 }
 
-type EmpresaRoleMap = Record<string, EmpresaMembro['role']>
+type EmpresaRoleMap = Record<string, Pick<EmpresaMembro, 'role' | 'permissao'>>
 type EmpresaCard = Empresa & { donoNome: string | null }
 type EmpresaMembroResumo = {
   user_id: string
@@ -233,7 +233,7 @@ function EmpresaFormModal({
                 <div>
                   <p className={styles.membersEyebrow}>Acessos da empresa</p>
                   <h3 className={styles.membersTitle}>
-                    {loadingMembros ? 'Carregando colaboradores...' : `${membros.length} acesso${membros.length === 1 ? '' : 's'}`}
+                    {loadingMembros ? 'Carregando acessos…' : `${membros.length} acesso${membros.length === 1 ? '' : 's'}`}
                   </h3>
                 </div>
               </div>
@@ -250,7 +250,7 @@ function EmpresaFormModal({
                       </div>
                       <div className={styles.memberBadges}>
                         <span className={`${styles.memberBadge} ${membro.empresa_role === 'admin' ? styles.memberBadgeAdmin : styles.memberBadgeMember}`}>
-                          {membro.empresa_role === 'admin' ? 'Titular' : 'Colaborador'}
+                          {membro.empresa_role === 'admin' ? 'Titular' : 'Funcionário'}
                         </span>
                       </div>
                     </div>
@@ -261,6 +261,10 @@ function EmpresaFormModal({
                   )}
                 </div>
               )}
+
+              <p className={styles.membersHint}>
+                Para adicionar ou mudar o acesso de funcionários, use Configuração geral › Funcionários.
+              </p>
             </section>
           )}
 
@@ -422,11 +426,11 @@ export default function EmpresaGatePage({
     } else {
       const { data: membros } = await supabase
         .from('empresa_membros')
-        .select('empresa_id, role')
+        .select('empresa_id, role, permissao')
         .eq('user_id', user.id)
 
-      const membrosData = (membros ?? []) as Pick<EmpresaMembro, 'empresa_id' | 'role'>[]
-      rolesMap = Object.fromEntries(membrosData.map(m => [m.empresa_id, m.role]))
+      const membrosData = (membros ?? []) as Pick<EmpresaMembro, 'empresa_id' | 'role' | 'permissao'>[]
+      rolesMap = Object.fromEntries(membrosData.map(m => [m.empresa_id, { role: m.role, permissao: m.permissao }]))
       const ids = membrosData.map(m => m.empresa_id)
 
       if (ids.length > 0) {
@@ -704,7 +708,7 @@ export default function EmpresaGatePage({
   const podeCriarEmpresa = isSystemAdmin || tipoUsuario === 'titular'
 
   const podeEditarEmpresa = useMemo(() => (
-    (empresaId: string) => isSystemAdmin || empresaRoles[empresaId] === 'admin'
+    (empresaId: string) => isSystemAdmin || empresaRoles[empresaId]?.role === 'admin'
   ), [empresaRoles, isSystemAdmin])
 
   const buscaNormalizada = busca.trim().toLocaleLowerCase('pt-BR')
@@ -729,36 +733,36 @@ export default function EmpresaGatePage({
   const textos = contexto === 'labs'
     ? {
         tituloComEmpresas: 'Selecionar empresa',
-        tituloSemEmpresas: podeCriarEmpresa ? 'Criar sua primeira empresa' : 'Aguardando vinculo com empresa',
+        tituloSemEmpresas: podeCriarEmpresa ? 'Criar sua primeira empresa' : 'Aguardando vínculo com empresa',
         subtituloComEmpresas: podeCriarEmpresa
           ? 'Escolha a empresa para ver os laboratórios cadastrados ou crie uma nova.'
           : 'Escolha a empresa vinculada ao seu acesso para ver os laboratórios cadastrados.',
         subtituloSemEmpresas: podeCriarEmpresa
           ? 'Para usar o Controle de Laboratórios, você precisa criar uma empresa.'
-          : 'Seu acesso esta como colaborador. Um titular precisa vincular voce a uma empresa em Minhas empresas.',
+          : 'Peça ao titular da clínica para liberar o seu acesso em Configuração geral › Funcionários.',
         botaoSelecionar: 'Acessar laboratórios',
       }
     : contexto === 'precificacao'
       ? {
           tituloComEmpresas: 'Selecionar empresa',
-          tituloSemEmpresas: podeCriarEmpresa ? 'Criar sua primeira empresa' : 'Aguardando vinculo com empresa',
+          tituloSemEmpresas: podeCriarEmpresa ? 'Criar sua primeira empresa' : 'Aguardando vínculo com empresa',
           subtituloComEmpresas: podeCriarEmpresa
             ? 'Escolha a empresa para gerenciar a precificação ou crie uma nova.'
             : 'Escolha a empresa vinculada ao seu acesso para gerenciar a precificação.',
           subtituloSemEmpresas: podeCriarEmpresa
             ? 'Para usar a Precificação, você precisa criar uma empresa.'
-            : 'Seu acesso esta como colaborador. Um titular precisa vincular voce a uma empresa em Minhas empresas.',
+            : 'Peça ao titular da clínica para liberar o seu acesso em Configuração geral › Funcionários.',
           botaoSelecionar: 'Acessar precificação',
         }
     : {
         tituloComEmpresas: 'Qual empresa você quer analisar?',
-        tituloSemEmpresas: podeCriarEmpresa ? 'Criar sua primeira empresa' : 'Aguardando vinculo com empresa',
+        tituloSemEmpresas: podeCriarEmpresa ? 'Criar sua primeira empresa' : 'Aguardando vínculo com empresa',
         subtituloComEmpresas: podeCriarEmpresa
           ? 'Escolha a empresa para abrir a DFC ou cadastre uma nova.'
           : 'Escolha a empresa vinculada ao seu acesso para abrir a DFC.',
         subtituloSemEmpresas: podeCriarEmpresa
           ? 'Para usar a Análise DFC, você precisa criar uma empresa.'
-          : 'Seu acesso esta como colaborador. Um titular precisa vincular voce a uma empresa em Minhas empresas.',
+          : 'Peça ao titular da clínica para liberar o seu acesso em Configuração geral › Funcionários.',
         botaoSelecionar: 'Acessar DFC',
       }
 
@@ -866,6 +870,9 @@ export default function EmpresaGatePage({
             <ul className={styles.lista}>
               {empresasOrdenadas.map(emp => {
                 const podeEditar = podeEditarEmpresa(emp.id)
+                // Funcionário com permissão de leitor: só consulta a DFC desta empresa.
+                const vinculo = empresaRoles[emp.id]
+                const somenteLeitura = vinculo?.role === 'membro' && vinculo.permissao === 'leitor'
                 const ehUltima = emp.id === ultimaEmpresaId && empresas.length > 1
                 const cnpjFormatado = emp.cnpj ? formatarCnpj(emp.cnpj) : ''
 
@@ -875,7 +882,7 @@ export default function EmpresaGatePage({
                       type="button"
                       className={styles.itemPrincipal}
                       onClick={() => selecionar(emp)}
-                      aria-label={`${textos.botaoSelecionar}: ${emp.nome}`}
+                      aria-label={`${textos.botaoSelecionar}: ${emp.nome}${somenteLeitura ? ' (somente leitura)' : ''}`}
                     >
                       {emp.card_background_url ? (
                         <img src={emp.card_background_url} alt="" className={styles.avatarImg} />
@@ -886,6 +893,7 @@ export default function EmpresaGatePage({
                         <span className={styles.itemNomeLinha}>
                           <span className={styles.itemNome}>{emp.nome}</span>
                           {ehUltima && <span className={styles.selo}>Último acesso</span>}
+                          {somenteLeitura && <span className={`${styles.selo} ${styles.seloLeitura}`}>Somente leitura</span>}
                         </span>
                         <span className={styles.itemDetalhe}>
                           {cnpjFormatado && <>CNPJ {cnpjFormatado}</>}

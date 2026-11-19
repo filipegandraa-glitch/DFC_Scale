@@ -2,22 +2,22 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import styles from './MenuPerfil.module.css'
 
 // Menu de perfil no canto superior direito (modelo: menu da conta da Precificação Scale).
-// Todos veem "Referências do DRE"; só o ADM edita lá dentro.
+// "Minha conta" (dados e senha) e "Configuração geral" (Referências e Estrutura do DRE:
+// todos consultam, só o ADM edita lá dentro).
 
 export interface MenuPerfilProps {
   nome: string
   email: string
   /** Rótulo do cargo: Administrador, Titular, Colaborador... */
   cargo: string
-  podeEditarReferencias: boolean
-  onAbrirReferencias: () => void
-  onAbrirEstrutura: () => void
+  onAbrirConta: () => void
+  onAbrirConfiguracao: () => void
   onSair: () => void
 }
 
 const apelidoDoEmail = (email: string, nome: string) => email.split('@')[0] || nome
 
-export function MenuPerfil({ nome, email, cargo, podeEditarReferencias, onAbrirReferencias, onAbrirEstrutura, onSair }: MenuPerfilProps) {
+export function MenuPerfil({ nome, email, cargo, onAbrirConta, onAbrirConfiguracao, onSair }: MenuPerfilProps) {
   const [aberto, setAberto] = useState(false)
   const raizRef = useRef<HTMLDivElement>(null)
   const gatilhoRef = useRef<HTMLButtonElement>(null)
@@ -119,32 +119,20 @@ export function MenuPerfil({ nome, email, cargo, podeEditarReferencias, onAbrirR
 
           <hr className={styles.divisor} />
 
-          <button type="button" role="menuitem" className={styles.item} onClick={escolher(onAbrirReferencias)}>
+          <button type="button" role="menuitem" className={styles.item} onClick={escolher(onAbrirConta)}>
+            <svg className={styles.icone} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+            <span className={styles.itemTexto}><span>Minha conta</span></span>
+          </button>
+
+          <button type="button" role="menuitem" className={styles.item} onClick={escolher(onAbrirConfiguracao)}>
             <svg className={styles.icone} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" />
               <circle cx="15" cy="6" r="2" /><circle cx="9" cy="12" r="2" /><circle cx="17" cy="18" r="2" />
             </svg>
-            <span className={styles.itemTexto}>
-              <span>Referências do DRE</span>
-              <span className={styles.itemDetalhe}>
-                {podeEditarReferencias ? 'Ver e editar as faixas' : 'Consultar as faixas do método'}
-              </span>
-            </span>
-          </button>
-
-          <button type="button" role="menuitem" className={styles.item} onClick={escolher(onAbrirEstrutura)}>
-            <svg className={styles.icone} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <rect x="3" y="3" width="7" height="5" rx="1.2" />
-              <rect x="14" y="10" width="7" height="5" rx="1.2" />
-              <rect x="14" y="17" width="7" height="4" rx="1.2" />
-              <path d="M6.5 8v10.5H14M6.5 12.5H14" />
-            </svg>
-            <span className={styles.itemTexto}>
-              <span>Estrutura do DRE</span>
-              <span className={styles.itemDetalhe}>
-                {podeEditarReferencias ? 'Linhas, contas e segmentos' : 'Consultar linhas e contas'}
-              </span>
-            </span>
+            <span className={styles.itemTexto}><span>Configuração geral</span></span>
           </button>
 
           <hr className={styles.divisor} />

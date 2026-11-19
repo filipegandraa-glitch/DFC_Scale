@@ -1,0 +1,427 @@
+/* Minha conta: faixa e tokens vêm de PerfilAdminPage.module.css (base).
+   Corpo no modelo da "Minha conta" da Precificação Scale: cartão de identidade
+   escuro à esquerda e cartões brancos (Quem é você, Segurança) à direita. */
+
+.page {
+  --coluna: 1040px;
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+/* ── Cartão de identidade ── */
+.lateral {
+  position: sticky;
+  top: 24px;
+}
+
+.cartao {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 24px 22px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(194, 160, 99, 0.16) 0%, rgba(194, 160, 99, 0) 60%),
+    #16140f;
+  color: #f4efe3;
+  box-shadow: 0 16px 40px rgba(22, 20, 15, 0.18);
+}
+
+.avatar {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, #7e6234, #efe0b6);
+  margin-bottom: 18px;
+}
+
+.avatar span,
+.avatar img {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: linear-gradient(160deg, #efe0b6 0%, #c2a063 100%);
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  color: #16140f;
+}
+
+.cartaoNome {
+  margin: 0;
+  max-width: 100%;
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.cartaoEmail {
+  margin: 6px 0 0;
+  max-width: 100%;
+  font-size: 14px;
+  color: rgba(244, 239, 227, 0.68);
+  overflow-wrap: anywhere;
+}
+
+.cartaoDivisor {
+  width: 100%;
+  margin: 20px 0 16px;
+  border: none;
+  border-top: 1px solid rgba(244, 239, 227, 0.14);
+}
+
+.cartaoCargo {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #c2a063;
+}
+
+.legenda {
+  margin: 12px 4px 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--tinta-2);
+}
+
+/* ── Cartões brancos ── */
+.colunaCards {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 30px;
+  border: 1px solid var(--borda-suave);
+  border-radius: 16px;
+  background: var(--superficie);
+  box-shadow: 0 1px 2px rgba(22, 20, 15, 0.04), 0 8px 24px rgba(22, 20, 15, 0.04);
+}
+
+.cardTitulo {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+}
+
+.duasColunas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rotulo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.input,
+.caixaPrefixo,
+.caixaSenha {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--borda-campo);
+  border-radius: 10px;
+  background: var(--superficie);
+  color: var(--tinta);
+  font-size: 15px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input {
+  padding: 0 14px;
+}
+
+.input::placeholder,
+.inputComPrefixo::placeholder {
+  color: var(--tinta-3);
+}
+
+.input:focus-visible,
+.caixaPrefixo:focus-within,
+.caixaSenha:focus-within {
+  outline: none;
+  border-color: var(--tinta);
+  box-shadow: 0 0 0 3px rgba(194, 160, 99, 0.28);
+}
+
+.inputInvalido,
+.inputInvalido:focus-visible {
+  border-color: var(--erro);
+}
+
+.caixaPrefixo,
+.caixaSenha {
+  display: flex;
+  align-items: center;
+}
+
+.caixaSenha .input {
+  border: none;
+  min-height: 46px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.prefixo {
+  padding-left: 14px;
+  color: var(--tinta-2);
+}
+
+.inputComPrefixo {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 14px 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--tinta);
+  font-size: 15px;
+}
+
+.inputComPrefixo:focus-visible { outline: none; }
+
+.olho {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-right: 2px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.olho:hover { color: var(--tinta); }
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.check input {
+  width: 18px;
+  height: 18px;
+  accent-color: #16140f;
+}
+
+.check:has(input:disabled) {
+  color: var(--tinta-3);
+  cursor: default;
+}
+
+.dica {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tinta-2);
+}
+
+.erroCampo {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--erro);
+}
+
+/* Outros links */
+.listaLinks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.linhaLink {
+  display: flex;
+  gap: 8px;
+}
+
+.remover {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  border: 1px solid var(--borda-campo);
+  border-radius: 10px;
+  background: var(--superficie);
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.remover:hover {
+  color: var(--erro);
+  border-color: var(--erro-borda);
+  background: var(--erro-bg);
+}
+
+.adicionar {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px dashed var(--borda-campo);
+  border-radius: 999px;
+  background: none;
+  color: var(--tinta);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.adicionar:hover {
+  border-color: var(--tinta);
+  background: var(--marfim-claro);
+}
+
+/* Rodapé dos cartões */
+.rodapeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 20px;
+  border-top: 1px solid var(--borda-suave);
+}
+
+.travado {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--marfim);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tinta-2);
+  overflow-wrap: anywhere;
+}
+
+.acoes,
+.acoesSenha {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.erroAcao {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--erro);
+}
+
+/* ── Celular ── */
+@media (max-width: 900px) {
+  .grade { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .lateral { position: static; }
+}
+
+@media (max-width: 600px) {
+  .card { padding: 22px 18px; }
+  .duasColunas { grid-template-columns: minmax(0, 1fr); }
+  .acoes .erroAcao,
+  .acoesSenha .erroAcao { flex-basis: 100%; text-align: right; }
+}
+
+/* ── Modo escuro ──
+   Tokens do corpo já trocados em PerfilAdminPage.module.css (base); aqui só as
+   cores fixas. O cartão de identidade já é escuro: ganha um contorno para não
+   sumir no fundo grafite. */
+:global(html[data-tema="escuro"]) .cartao {
+  box-shadow: 0 0 0 1px var(--e-borda), var(--e-sombra);
+}
+
+:global(html[data-tema="escuro"]) .card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Campos: fundo elevado sobre o cartão grafite */
+:global(html[data-tema="escuro"]) .input,
+:global(html[data-tema="escuro"]) .caixaPrefixo,
+:global(html[data-tema="escuro"]) .caixaSenha {
+  background: var(--e-elevado);
+}
+
+/* O input dentro da caixa de senha continua transparente (a caixa tem o fundo) */
+:global(html[data-tema="escuro"]) .caixaSenha .input {
+  background: transparent;
+}
+
+:global(html[data-tema="escuro"]) .input::placeholder,
+:global(html[data-tema="escuro"]) .inputComPrefixo::placeholder {
+  color: var(--e-texto-3);
+}
+
+:global(html[data-tema="escuro"]) .check input {
+  accent-color: var(--e-dourado);
+}
+
+:global(html[data-tema="escuro"]) .remover {
+  background: var(--e-elevado);
+}
+
+:global(html[data-tema="escuro"]) .remover:hover {
+  background: var(--e-erro-bg);
+}
+
+:global(html[data-tema="escuro"]) .adicionar:hover {
+  background: var(--e-hover);
+}
+
+:global(html[data-tema="escuro"]) .chip {
+  background: var(--e-elevado);
+}

@@ -87,6 +87,8 @@ interface Props {
   nomeUsuario: string
   /** Menu de perfil do canto superior direito. */
   menuPerfil?: ReactNode
+  /** Menu lateral da Configuração geral (Referências, Estrutura...), à esquerda do conteúdo. */
+  abas?: ReactNode
   onVoltar: () => void
   /** O App consulta antes de sair pelo botão Voltar do navegador (false = ficar). */
   registrarGuardaSaida?: (guarda: (() => boolean) | null) => void
@@ -100,7 +102,7 @@ async function nomeDoAutor(id: string | null): Promise<string | null> {
   return data?.name?.trim() || null
 }
 
-export default function PerfilAdminPage({ podeEditar, nomeUsuario, menuPerfil, onVoltar, registrarGuardaSaida }: Props) {
+export default function PerfilAdminPage({ podeEditar, nomeUsuario, menuPerfil, abas, onVoltar, registrarGuardaSaida }: Props) {
   const [carregamento, setCarregamento] = useState<'carregando' | 'pronto' | 'erro'>('carregando')
   const [erroCarregamento, setErroCarregamento] = useState('')
   const [salvas, setSalvas] = useState<ReferenciasDre>(REFERENCIAS_PADRAO)
@@ -255,7 +257,7 @@ export default function PerfilAdminPage({ podeEditar, nomeUsuario, menuPerfil, o
           : 'Nada alterado.'
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${abas ? styles.comLateral : ''}`}>
       {/* ── Faixa escura: navegação e título ── */}
       <header className={`${styles.faixa} tema-grafite`}>
         <div className={styles.faixaGlow} aria-hidden />
@@ -272,7 +274,7 @@ export default function PerfilAdminPage({ podeEditar, nomeUsuario, menuPerfil, o
           </div>
 
           <div className={styles.faixaCabeca}>
-            <p className={styles.eyebrow}>{podeEditar ? 'Perfil administrativo' : 'Perfil'}</p>
+            <p className={styles.eyebrow}>Configuração geral</p>
             <h1 className={styles.titulo}>Referências do DRE</h1>
             <p className={styles.apoio}>
               Estas faixas valem para todas as empresas do DFC Scale. Elas definem quando cada linha do DRE
@@ -285,6 +287,8 @@ export default function PerfilAdminPage({ podeEditar, nomeUsuario, menuPerfil, o
 
       {/* ── Corpo marfim ── */}
       <main className={`${styles.corpo} tema-marfim`}>
+        <div className={styles.corpoGrade}>
+        {abas && <aside className={styles.lateral}>{abas}</aside>}
         <div className={styles.conteudo}>
 
           {carregamento === 'carregando' && (
@@ -469,6 +473,7 @@ export default function PerfilAdminPage({ podeEditar, nomeUsuario, menuPerfil, o
               </section>
             </>
           )}
+        </div>
         </div>
       </main>
 

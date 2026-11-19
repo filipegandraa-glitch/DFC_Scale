@@ -395,3 +395,51 @@
   .opcao, .traco, .tracoAtivo { transition: none; }
   .opcao:hover { transform: none; }
 }
+
+/* ── Modo escuro ── */
+/* O painel marfim vira grafite. As peças "tinta" (botão principal, chip do
+   resultado, ícone escuro) invertem como o botão principal do modo escuro:
+   fundo marfim e texto grafite. */
+:global(html[data-tema="escuro"]) .overlay {
+  --cs-grafite:  var(--e-botao-bg);    /* fundo das peças "tinta" */
+  --cs-marfim:   var(--e-botao-texto); /* texto das peças "tinta" (o .painel tem fundo próprio abaixo) */
+  --cs-tinta:    var(--e-texto);
+  --cs-ouro-txt: var(--e-link);
+  --cs-linha:    var(--e-borda);
+  --cs-texto-2:  var(--e-texto-2);
+}
+
+:global(html[data-tema="escuro"]) .painel {
+  background: var(--e-superficie);
+  color: var(--e-texto);
+  box-shadow: var(--e-sombra-modal), 0 0 0 1px var(--e-borda);
+}
+
+:global(html[data-tema="escuro"]) .fechar { background: var(--e-elevado); }
+:global(html[data-tema="escuro"]) .fechar:hover { border-color: var(--e-borda-campo); }
+
+:global(html[data-tema="escuro"]) .traco { background: var(--e-borda-campo); }
+
+/* (0,3,2): vence .equacao > span:not(.operador) e .equacao > span.resultado */
+:global(html[data-tema="escuro"]) .equacao > span:not(.operador) {
+  background: var(--e-elevado);
+}
+:global(html[data-tema="escuro"]) .equacao > span.resultado {
+  background: var(--e-botao-bg);
+  border-color: var(--e-botao-bg);
+  color: var(--e-botao-texto);
+}
+
+:global(html[data-tema="escuro"]) .recurso { background: var(--e-elevado); }
+:global(html[data-tema="escuro"]) .recursoIcone { border-color: var(--e-dourado-borda); }
+
+:global(html[data-tema="escuro"]) .opcao { background: var(--e-elevado); }
+:global(html[data-tema="escuro"]) .opcao:hover { box-shadow: var(--e-sombra); }
+
+:global(html[data-tema="escuro"]) .btnSecundario { border-color: var(--e-borda-campo); }
+:global(html[data-tema="escuro"]) .btnSecundario:hover { border-color: var(--e-texto-3); }
+
+:global(html[data-tema="escuro"]) .btnPrimario:hover {
+  background: var(--e-botao-hover);
+  border-color: var(--e-botao-hover);
+}

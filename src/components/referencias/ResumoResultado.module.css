@@ -242,3 +242,32 @@
   .lista .colValor::before { content: 'R$ '; }
   .lista .colRef { grid-column: 3 / 5; grid-row: 2; text-align: right; white-space: normal; font-size: 13px; }
 }
+
+/* ── Modo escuro ──
+   No corpo marfim que virou grafite, os tons escurecidos do marfim somem:
+   volta aos tons claros das faixas (os mesmos do selo). */
+:global(html[data-tema="escuro"] .tema-marfim) .resumo {
+  --faixa-ideal-cor:     #5cc8a8;
+  --faixa-aceitavel-cor: #e6c869;
+  --faixa-media-cor:     #b5b0a3;
+  --faixa-atencao-cor:   #ef8a5e;
+}
+
+:global(html[data-tema="escuro"] .tema-marfim) .btnReferencias {
+  border-color: var(--e-borda-forte);
+  background: var(--e-superficie);
+  color: var(--e-texto-2);
+}
+
+:global(html[data-tema="escuro"] .tema-marfim) .btnReferencias:hover {
+  border-color: var(--e-dourado);
+  color: var(--e-link);
+}
+
+:global(html[data-tema="escuro"]) .btnReferencias:focus-visible {
+  outline-color: var(--e-dourado);
+}
+
+:global(html[data-tema="escuro"]) .lista tbody tr:hover {
+  background: rgba(244, 239, 227, 0.03);
+}

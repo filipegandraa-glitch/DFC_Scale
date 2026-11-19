@@ -896,3 +896,29 @@
   .tdGrupo         { display: none; }
   .reviewTable thead th:nth-child(6) { display: none; }
 }
+
+/* ── Modo escuro ── */
+/* Este fluxo abre no modal de upload da Análise DFC, dentro de .temaOriginal,
+   que já usa os tokens escuros de antes (#0f0f0f/#141414) e cores fixas pensadas
+   para fundo escuro: no modo escuro ele fica exatamente como está. A única
+   exceção é quem ainda tem html[data-theme="light"] salvo (tema antigo do site):
+   aí .temaOriginal vira claro, então redefinimos os tokens na raiz do fluxo com a
+   paleta grafite. Os descendentes (inclusive o modal "sugerida" e as regras de
+   th/td do .temaOriginal) herdam daqui. */
+:global(html[data-tema="escuro"][data-theme="light"]) .section {
+  --bg:            var(--e-fundo);
+  --bg-surface:    var(--e-fundo-2);
+  --bg-elevated:   var(--e-superficie);
+  --bg-hover:      var(--e-hover);
+  --border:        var(--e-borda);
+  --border-gold:   var(--e-dourado-borda);
+  --text:          var(--e-texto);
+  --text-muted:    var(--e-texto-2);
+  --text-dim:      var(--e-texto-3);
+  --danger-border:  rgba(239, 68, 68, 0.28);
+  --success-border: rgba(16, 185, 129, 0.28);
+  --warning-border: rgba(245, 158, 11, 0.28);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.50);
+  --shadow-modal:    var(--e-sombra-modal);
+  color: var(--e-texto);
+}

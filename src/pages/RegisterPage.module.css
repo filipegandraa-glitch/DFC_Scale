@@ -163,6 +163,14 @@
   background: rgba(22, 20, 15, 0.06);
 }
 
+/* Dica abaixo do campo (ex.: a regra da senha). */
+.hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5f5a4e;
+}
+
 /* "Esqueci minha senha" — alinhado à direita, abaixo do campo de senha. */
 .forgotLink {
   align-self: flex-end;

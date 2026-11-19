@@ -184,6 +184,8 @@ export interface Database {
           empresa_id: string
           user_id:    string
           role:       'admin' | 'membro'
+          /** DFC: leitor só consulta; editor consulta e altera (titular sempre edita) */
+          permissao:  PermissaoEmpresa
           created_at: string
         }
         Insert: {
@@ -191,10 +193,12 @@ export interface Database {
           empresa_id:  string
           user_id:     string
           role?:       'admin' | 'membro'
+          permissao?:  PermissaoEmpresa
           created_at?: string
         }
         Update: {
           role?: 'admin' | 'membro'
+          permissao?: PermissaoEmpresa
         }
         Relationships: []
       }
@@ -1164,6 +1168,28 @@ export interface Database {
         Args: { p_empresa_id: string; p_user_id: string }
         Returns: undefined
       }
+      dfc_listar_funcionarios: {
+        Args: Record<string, never>
+        Returns: {
+          user_id: string
+          nome: string | null
+          email: string | null
+          pendente: boolean
+          convidado_em: string | null
+          empresa_id: string
+          empresa_nome: string
+          permissao: PermissaoEmpresa
+          vinculado_em: string
+        }[]
+      }
+      dfc_definir_acessos_funcionario: {
+        Args: { p_user_id: string; p_acessos: { empresa_id: string; permissao: PermissaoEmpresa }[] }
+        Returns: undefined
+      }
+      dfc_vincular_funcionario: {
+        Args: { p_email: string; p_acessos: { empresa_id: string; permissao: PermissaoEmpresa }[] }
+        Returns: { status: 'vinculado' | 'nao_encontrado'; user_id: string | null; pendente: boolean | null }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -1175,6 +1201,9 @@ export interface Database {
 }
 
 // ── Convenience aliases ───────────────────────────────────────────────────
+
+/** Permissão de um funcionário numa empresa (DFC Scale) */
+export type PermissaoEmpresa = 'leitor' | 'editor'
 
 export type Profile            = Database['public']['Tables']['profiles']['Row']
 export type AppCategory        = Database['public']['Tables']['app_categories']['Row']

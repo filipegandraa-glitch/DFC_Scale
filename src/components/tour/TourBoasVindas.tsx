@@ -83,15 +83,23 @@ const RECURSOS = [
 
 const TOTAL_PASSOS = 3
 
+// Funcionário com acesso de leitura: só consulta, então o tour não oferece importar nem lançar.
+const RECURSOS_LEITURA = [
+  { icone: <IconeChat />, titulo: 'Assistente de DFC', texto: 'Pergunte em português: “qual meu maior custo?”, “como está minha margem?”.' },
+  { icone: <IconePlanilha />, titulo: 'Exportar Relatório', texto: 'Baixe a DFC do período filtrado em planilha .xlsx, pronta para o contador.' },
+]
+
 interface TourBoasVindasProps {
   aberto: boolean
   onConcluir: () => void
   onAdiar: () => void
   onImportar: () => void
   onNovoLancamento: () => void
+  /** Funcionário leitor: só consulta (sem importar nem lançar) */
+  somenteLeitura?: boolean
 }
 
-export function TourBoasVindas({ aberto, onConcluir, onAdiar, onImportar, onNovoLancamento }: TourBoasVindasProps) {
+export function TourBoasVindas({ aberto, onConcluir, onAdiar, onImportar, onNovoLancamento, somenteLeitura = false }: TourBoasVindasProps) {
   const [passo, setPasso] = useState(1)
   const painelRef = useRef<HTMLDivElement>(null)
   const corpoRef = useRef<HTMLDivElement>(null)
@@ -183,11 +191,12 @@ export function TourBoasVindas({ aberto, onConcluir, onAdiar, onImportar, onNovo
                 <section className={styles.passo}>
                   <h3 className={styles.passoTitulo}>O que você faz nesta tela</h3>
                   <p className={styles.passoTexto}>
-                    Quatro botões dão conta do dia a dia. Os filtros de ano e meses mudam tudo de uma
-                    vez: cards, gráficos e tabela.
+                    {somenteLeitura
+                      ? 'Seu acesso a esta empresa é de leitura: você consulta tudo, sem alterar os lançamentos. Os filtros de ano e meses mudam cards, gráficos e tabela de uma vez.'
+                      : 'Quatro botões dão conta do dia a dia. Os filtros de ano e meses mudam tudo de uma vez: cards, gráficos e tabela.'}
                   </p>
                   <ul className={styles.recursos}>
-                    {RECURSOS.map(r => (
+                    {(somenteLeitura ? RECURSOS_LEITURA : RECURSOS).map(r => (
                       <li key={r.titulo} className={styles.recurso}>
                         <span className={styles.recursoIcone}>{r.icone}</span>
                         <div>
@@ -200,7 +209,20 @@ export function TourBoasVindas({ aberto, onConcluir, onAdiar, onImportar, onNovo
                 </section>
               )}
 
-              {passo === 3 && (
+              {passo === 3 && somenteLeitura && (
+                <section className={styles.passo}>
+                  <h3 className={styles.passoTitulo}>Tudo pronto para consultar</h3>
+                  <p className={styles.passoTexto}>
+                    Escolha o ano e os meses no topo e acompanhe entradas, saídas e o resultado. Para importar
+                    extratos ou lançar, peça ao titular da empresa o acesso de editor.
+                  </p>
+                  <button type="button" className={styles.btnPrimario} onClick={onConcluir}>
+                    Explorar a DFC
+                  </button>
+                </section>
+              )}
+
+              {passo === 3 && !somenteLeitura && (
                 <section className={styles.passo}>
                   <h3 className={styles.passoTitulo}>Como você quer começar?</h3>
                   <p className={styles.passoTexto}>Dá no mesmo: os dois caminhos alimentam a mesma DFC.</p>

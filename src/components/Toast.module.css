@@ -143,3 +143,21 @@
     animation: none;
   }
 }
+
+/* ── Modo escuro ── */
+/* O toast fica na raiz da página (fora do corpo marfim) e usa os tokens globais
+   do index.css, que já são escuros: no modo escuro ele fica como está. A única
+   exceção é quem ainda tem html[data-theme="light"] salvo (tema antigo do site):
+   aí o toast seria claro sobre o grafite, então trocamos os tokens dele pelos
+   do modo escuro. */
+:global(html[data-tema="escuro"][data-theme="light"]) .toast {
+  --bg-elevated:    var(--e-elevado);
+  --bg-hover:       var(--e-hover);
+  --text:           var(--e-texto);
+  --text-muted:     var(--e-texto-2);
+  --success-border: var(--e-sucesso-borda);
+  --danger-border:  var(--e-erro-borda);
+  --warning-border: var(--e-aviso-borda);
+  --border-gold:    var(--e-dourado-borda);
+  --shadow-modal:   var(--e-sombra-modal);
+}

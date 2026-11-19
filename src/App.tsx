@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { ErrorBoundary } from './ErrorBoundary'
+import { AbasConfiguracao, type AbaConfiguracao } from './components/configuracao/AbasConfiguracao'
+import { GrupoPerfil } from './components/perfil/BotaoTema'
 import { MenuPerfil } from './components/perfil/MenuPerfil'
 import { enviarBoasVindas } from './lib/boasVindas'
 import { supabase } from './lib/supabase'
@@ -11,20 +13,25 @@ import EmpresaGatePage from './pages/EmpresaGatePage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import EstruturaDrePage from './pages/EstruturaDrePage'
+import FuncionariosPage from './pages/FuncionariosPage'
+import MinhaContaPage from './pages/MinhaContaPage'
 import PerfilAdminPage from './pages/PerfilAdminPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import TermosPage from './pages/TermosPage'
 
 // DFC Scale: fork do PainelGestaa com apenas a Análise DFC.
 // Rotas: '/' (landing sem login, DFC com login), '/entrar' (login),
-// '/termos' (termos de uso), '/reset-password', '/referencias' (Referências do DRE)
-// e '/estrutura' (Estrutura do DRE). As duas últimas abrem pelo menu de perfil:
-// todos consultam, só profiles.role = 'admin' edita.
+// '/termos' (termos de uso), '/reset-password', '/conta' (Minha conta) e a
+// Configuração geral, com duas abas: '/referencias' (Referências do DRE) e
+// '/estrutura' (Estrutura do DRE). Todas abrem pelo menu de perfil; na
+// Configuração geral todos consultam, só profiles.role = 'admin' edita.
 const DFC_PATH = '/'
 const ENTRAR_PATH = '/entrar'
 const TERMOS_PATH = '/termos'
 const REFERENCIAS_PATH = '/referencias'
 const ESTRUTURA_PATH = '/estrutura'
+const CONTA_PATH = '/conta'
+const FUNCIONARIOS_PATH = '/funcionarios'
 // Caminho do app DFC no cadastro de apps do PainelGestaa (tabela `apps`),
 // usado para respeitar a liberação de acesso feita pelo admin.
 const DFC_INTERNAL_LINK = '/analise-dre'
@@ -57,7 +64,7 @@ async function sessionToUser(session: Session): Promise<User> {
 
 function rotuloCargo(admin: boolean, tipo: User['tipoUsuario']) {
   if (admin) return 'Administrador'
-  if (tipo === 'colaborador') return 'Colaborador'
+  if (tipo === 'colaborador') return 'Funcionário'
   if (tipo === 'titular') return 'Titular'
   return 'Usuário'
 }
@@ -326,7 +333,13 @@ function App() {
     setPathname(caminho)
   }, [])
   const abrirReferencias = useCallback(() => abrirTela(REFERENCIAS_PATH), [abrirTela])
-  const abrirEstrutura = useCallback(() => abrirTela(ESTRUTURA_PATH), [abrirTela])
+  const abrirConta = useCallback(() => abrirTela(CONTA_PATH), [abrirTela])
+  const abrirAbaConfiguracao = useCallback(
+    (aba: AbaConfiguracao) => abrirTela(
+      aba === 'estrutura' ? ESTRUTURA_PATH : aba === 'funcionarios' ? FUNCIONARIOS_PATH : REFERENCIAS_PATH,
+    ),
+    [abrirTela],
+  )
 
   const selecionarEmpresa = (emp: Empresa) => {
     localStorage.setItem(EMPRESA_STORAGE_KEY, JSON.stringify(emp))
@@ -417,17 +430,52 @@ function App() {
     )
   }
 
+  const cargo = rotuloCargo(isAdmin, user.tipoUsuario)
+  // Funcionários: titulares (e administradores) liberam as empresas deles para a equipe.
+  const podeTerEquipe = isAdmin || user.tipoUsuario !== 'colaborador'
+  // Botão de modo claro/escuro + menu de perfil (aparece em todas as telas depois do login).
   const menuPerfil = (
-    <MenuPerfil
-      nome={user.name}
-      email={user.email}
-      cargo={rotuloCargo(isAdmin, user.tipoUsuario)}
-      podeEditarReferencias={isAdmin}
-      onAbrirReferencias={abrirReferencias}
-      onAbrirEstrutura={abrirEstrutura}
-      onSair={() => { if (podeSairDaTela()) void handleLogout() }}
-    />
+    <GrupoPerfil>
+      <MenuPerfil
+        nome={user.name}
+        email={user.email}
+        cargo={cargo}
+        onAbrirConta={abrirConta}
+        onAbrirConfiguracao={abrirReferencias}
+        onSair={() => { if (podeSairDaTela()) void handleLogout() }}
+      />
+    </GrupoPerfil>
   )
+
+  if (pathname === CONTA_PATH) {
+    return (
+      <ErrorBoundary>
+        <MinhaContaPage
+          userId={userId!}
+          email={user.email}
+          cargo={cargo}
+          menuPerfil={menuPerfil}
+          onVoltar={() => navigate(DFC_PATH)}
+          onPerfilAtualizado={() => void refreshAuthenticatedUser()}
+          registrarGuardaSaida={registrarGuardaSaida}
+        />
+      </ErrorBoundary>
+    )
+  }
+
+  // Funcionários: só titulares e administradores (colaborador cai na DFC, abaixo).
+  if (pathname === FUNCIONARIOS_PATH && podeTerEquipe) {
+    return (
+      <ErrorBoundary>
+        <FuncionariosPage
+          userId={userId!}
+          menuPerfil={menuPerfil}
+          abas={<AbasConfiguracao atual="funcionarios" onAbrir={abrirAbaConfiguracao} mostrarFuncionarios />}
+          onVoltar={() => navigate(DFC_PATH)}
+        />
+      </ErrorBoundary>
+    )
+  }
 
   // Estrutura do DRE: todos consultam; só o ADM edita (o RLS também barra a gravação).
   if (pathname === ESTRUTURA_PATH) {
@@ -437,6 +485,7 @@ function App() {
           podeEditar={isAdmin}
           nomeUsuario={user.name}
           menuPerfil={menuPerfil}
+          abas={<AbasConfiguracao atual="estrutura" onAbrir={abrirAbaConfiguracao} mostrarFuncionarios={podeTerEquipe} />}
           onVoltar={() => navigate(DFC_PATH)}
           registrarGuardaSaida={registrarGuardaSaida}
         />
@@ -452,6 +501,7 @@ function App() {
           podeEditar={isAdmin}
           nomeUsuario={user.name}
           menuPerfil={menuPerfil}
+          abas={<AbasConfiguracao atual="referencias" onAbrir={abrirAbaConfiguracao} mostrarFuncionarios={podeTerEquipe} />}
           onVoltar={() => navigate(DFC_PATH)}
           registrarGuardaSaida={registrarGuardaSaida}
         />

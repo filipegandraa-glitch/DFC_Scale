@@ -309,3 +309,52 @@
   }
   :global(:root .tema-marfim) .card + .card { border-top: 1px solid var(--border); }
 }
+
+/* ── Modo escuro ── */
+/* Só o corpo marfim muda: as MiniColunas da faixa grafite já são escuras e ficam
+   como estão. O prefixo html[data-tema="escuro"] .tema-marfim (0,3,1) vence o
+   :root .tema-marfim (0,3,0) acima. As fatias mantêm a identidade da paleta
+   marfim (tinta, dourado, verde, petróleo, cáqui), clareadas para ler sobre
+   #0e0d0a/#16140f (todas ≥ 3:1 contra o fundo). */
+:global(html[data-tema="escuro"] .tema-marfim) .raiz,
+:global(html[data-tema="escuro"] .tema-marfim) .mini,
+:global(html[data-tema="escuro"] .tema-marfim) .card {
+  --serie-receita: var(--e-sucesso);
+  --serie-despesa: var(--e-erro);
+  --grade: rgba(244, 239, 227, 0.08);
+  --dica-fundo: var(--e-elevado);
+  --cat-1: var(--e-texto);   /* tinta → marfim (inverte como o botão principal) */
+  --cat-2: var(--e-dourado);
+  --cat-3: #4e9a7f;          /* verde ClinicScale clareado */
+  --cat-4: #86b4c1;          /* petróleo clareado */
+  --cat-5: #a8946a;          /* cáqui clareado */
+  --cat-outros: #6b6455;     /* neutro discreto, ainda visível no grafite */
+}
+
+/* Fios e textos do corpo: cores explícitas, sem depender dos tokens do .corpo */
+:global(html[data-tema="escuro"] .tema-marfim) .raiz { border-bottom-color: var(--e-borda); }
+:global(html[data-tema="escuro"] .tema-marfim) .card { border-left-color: var(--e-borda); }
+:global(html[data-tema="escuro"] .tema-marfim) .titulo,
+:global(html[data-tema="escuro"] .tema-marfim) .roscaCentroValor,
+:global(html[data-tema="escuro"] .tema-marfim) .roscaNome,
+:global(html[data-tema="escuro"] .tema-marfim) .roscaValor { color: var(--e-texto); }
+:global(html[data-tema="escuro"] .tema-marfim) .subtitulo,
+:global(html[data-tema="escuro"] .tema-marfim) .vazio,
+:global(html[data-tema="escuro"] .tema-marfim) .roscaCentroRotulo,
+:global(html[data-tema="escuro"] .tema-marfim) .roscaPct { color: var(--e-texto-2); }
+:global(html[data-tema="escuro"] .tema-marfim) .roscaItem:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--e-dourado);
+}
+
+/* Dica (tooltip), caso apareça no corpo */
+:global(html[data-tema="escuro"] .tema-marfim) .dica {
+  border-color: var(--e-borda-forte);
+  box-shadow: var(--e-sombra);
+}
+:global(html[data-tema="escuro"] .tema-marfim) .dicaLinha { color: var(--e-texto); }
+:global(html[data-tema="escuro"] .tema-marfim) .dicaTitulo,
+:global(html[data-tema="escuro"] .tema-marfim) .dicaNome { color: var(--e-texto-2); }
+
+@media (max-width: 1180px) {
+  :global(html[data-tema="escuro"] .tema-marfim) .card + .card { border-top-color: var(--e-borda); }
+}

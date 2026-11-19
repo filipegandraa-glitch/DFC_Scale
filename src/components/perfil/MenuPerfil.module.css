@@ -186,3 +186,26 @@
   .menu { animation: none; }
   .seta { transition: none; }
 }
+
+/* ── Modo escuro ── */
+/* O gatilho fica na faixa escura do topo e não muda; só o cartão marfim vira
+   grafite (os --mp-* só são usados pelo cartão). */
+:global(html[data-tema="escuro"]) .raiz {
+  --mp-marfim:       var(--e-elevado);
+  --mp-marfim-hover: var(--e-hover);
+  --mp-tinta:        var(--e-texto);
+  --mp-tinta-2:      var(--e-texto-2);
+  --mp-dourado:      var(--e-link);
+  --mp-linha:        var(--e-borda);
+}
+
+/* (0,2,1): mesma especificidade do html[data-theme="light"] .menu, vence por vir depois */
+:global(html[data-tema="escuro"]) .menu {
+  box-shadow: var(--e-sombra-modal), 0 0 0 1px var(--e-borda-forte);
+}
+
+:global(html[data-tema="escuro"]) .item { color: var(--e-texto-2); }
+:global(html[data-tema="escuro"]) .item:hover,
+:global(html[data-tema="escuro"]) .item:focus-visible {
+  color: var(--mp-tinta);
+}

@@ -13,6 +13,7 @@
   <body>
     <script>
       (function(){var t=localStorage.getItem('theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');})();
+      (function(){try{if(localStorage.getItem('dfc_tema')==='escuro')document.documentElement.setAttribute('data-tema','escuro');}catch(e){}})();
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

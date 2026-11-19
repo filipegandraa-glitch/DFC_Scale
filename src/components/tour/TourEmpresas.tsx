@@ -98,7 +98,7 @@ export function TourEmpresas({
     {
       icone: <IconeConta />,
       titulo: 'Menu da conta',
-      texto: 'No canto superior direito: Referências e Estrutura do DRE, e o botão Sair.',
+      texto: 'No canto superior direito: Minha conta, Configuração geral (Referências e Estrutura do DRE) e Sair.',
     },
   ]
 

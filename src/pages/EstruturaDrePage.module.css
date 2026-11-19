@@ -393,3 +393,64 @@
   .empresa { flex-direction: column; align-items: stretch; gap: 8px; }
   .empresa select { min-width: 0; }
 }
+
+/* ── Modo escuro ──
+   Os tokens (--tinta, --superficie, --borda…) já viram grafite em
+   PerfilAdminPage.module.css; aqui só as cores fixas deste módulo. */
+
+/* Segmento ativo: pílula marfim com texto tinta (inverte o grafite do claro) */
+:global(html[data-tema="escuro"]) .segmentoAtivo,
+:global(html[data-tema="escuro"]) .segmentoAtivo:hover {
+  color: var(--e-botao-texto);
+  background: var(--e-botao-bg);
+  border-color: var(--e-botao-bg);
+}
+
+:global(html[data-tema="escuro"]) .segmentoNovo {
+  border-color: var(--e-dourado-borda);
+}
+
+:global(html[data-tema="escuro"]) .contaInativa .contaNome {
+  text-decoration-color: rgba(244, 239, 227, 0.35);
+}
+
+:global(html[data-tema="escuro"]) .adicionar {
+  border-color: var(--e-dourado-borda);
+}
+
+:global(html[data-tema="escuro"]) .subtotal {
+  background: var(--e-dourado-bg);
+}
+
+/* Campos: fundo elevado para destacar do cartão grafite */
+:global(html[data-tema="escuro"]) .campoForm input,
+:global(html[data-tema="escuro"]) .campoForm select,
+:global(html[data-tema="escuro"]) .campoForm textarea,
+:global(html[data-tema="escuro"]) .empresa select {
+  background: var(--e-elevado);
+  color: var(--e-texto);
+  border-color: var(--e-borda-campo);
+}
+
+:global(html[data-tema="escuro"]) .campoForm input:focus,
+:global(html[data-tema="escuro"]) .campoForm select:focus,
+:global(html[data-tema="escuro"]) .campoForm textarea:focus,
+:global(html[data-tema="escuro"]) .empresa select:focus {
+  border-color: var(--e-dourado);
+}
+
+:global(html[data-tema="escuro"]) .campoForm input::placeholder,
+:global(html[data-tema="escuro"]) .campoForm textarea::placeholder {
+  color: var(--e-texto-3);
+}
+
+:global(html[data-tema="escuro"]) .btnPrimario {
+  color: var(--e-botao-texto);
+  background: var(--e-botao-bg);
+  border-color: var(--e-botao-bg);
+}
+
+:global(html[data-tema="escuro"]) .btnPrimario:hover {
+  background: var(--e-botao-hover);
+  border-color: var(--e-botao-hover);
+}

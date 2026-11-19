@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styles from './RegisterPage.module.css'
 import { supabase } from '../lib/supabase'
 import { useToastErrorState } from '../hooks/useToastErrorState'
@@ -16,6 +16,18 @@ export default function AcceptInvitePage({ email, onSuccess }: AcceptInvitePageP
   const [error,           setError]           = useToastErrorState()
   const [loading,         setLoading]         = useState(false)
 
+  // O convite pode trazer o nome (user_metadata.full_name): já preenche, e o campo segue editável.
+  useEffect(() => {
+    let ativo = true
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      const nomeConvite = user?.user_metadata?.full_name
+      if (ativo && typeof nomeConvite === 'string' && nomeConvite.trim()) {
+        setName(atual => atual || nomeConvite.trim())
+      }
+    })
+    return () => { ativo = false }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -25,8 +37,9 @@ export default function AcceptInvitePage({ email, onSuccess }: AcceptInvitePageP
       return
     }
 
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.')
+    // Mesma regra da Minha conta
+    if (password.length < 8 || !/\d/.test(password)) {
+      setError('A senha precisa ter pelo menos 8 caracteres, com ao menos um número.')
       return
     }
 
@@ -79,7 +92,7 @@ export default function AcceptInvitePage({ email, onSuccess }: AcceptInvitePageP
         {/* Header */}
         <div className={styles.formHeader}>
           <h1 className={styles.title}>Complete seu cadastro</h1>
-          <p className={styles.subtitle}>Você foi convidado para o PainelGestaa</p>
+          <p className={styles.subtitle}>Você foi convidado(a) para o DFC Scale</p>
         </div>
 
         {/* E-mail (somente leitura) */}
@@ -137,11 +150,12 @@ export default function AcceptInvitePage({ email, onSuccess }: AcceptInvitePageP
                 id="inv-password"
                 type={showPassword ? 'text' : 'password'}
                 className={styles.input}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Crie uma senha"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
                 autoComplete="new-password"
+                aria-describedby="inv-password-hint"
               />
               <button
                 type="button"
@@ -163,6 +177,7 @@ export default function AcceptInvitePage({ email, onSuccess }: AcceptInvitePageP
                 )}
               </button>
             </div>
+            <p id="inv-password-hint" className={styles.hint}>Mínimo de 8 caracteres, com ao menos um número.</p>
           </div>
 
           {/* Confirmar senha */}

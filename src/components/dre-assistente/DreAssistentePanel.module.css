@@ -534,3 +534,23 @@
     text-align: center;
   }
 }
+
+/* ── Modo escuro ── */
+/* O painel abre no modal do assistente da Análise DFC, dentro de .temaOriginal,
+   que já usa os tokens escuros de antes e cores fixas pensadas para fundo
+   escuro: no modo escuro ele fica exatamente como está. A única exceção é quem
+   ainda tem html[data-theme="light"] salvo (tema antigo do site): aí
+   .temaOriginal vira claro, então redefinimos os tokens na raiz do painel com a
+   paleta grafite. */
+:global(html[data-tema="escuro"][data-theme="light"]) .panel {
+  --bg:            var(--e-fundo);
+  --bg-surface:    var(--e-fundo-2);
+  --bg-elevated:   var(--e-superficie);
+  --bg-hover:      var(--e-hover);
+  --border:        var(--e-borda);
+  --border-gold:   var(--e-dourado-borda);
+  --text:          var(--e-texto);
+  --text-muted:    var(--e-texto-2);
+  --text-dim:      var(--e-texto-3);
+  color: var(--e-texto);
+}

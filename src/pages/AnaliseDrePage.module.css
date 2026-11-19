@@ -2277,3 +2277,269 @@
   font-size: 13px;
   line-height: 1.5;
 }
+
+/* Funcionário com acesso de leitura (cor de informação do guia, sobre a faixa escura) */
+.seloLeitura {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 12px;
+  padding: 3px 10px;
+  border: 1px solid rgba(130, 183, 195, 0.45);
+  border-radius: 999px;
+  background: #0f2329;
+  color: #82b7c3;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* ── Modo escuro ──
+   Só vale com html[data-tema="escuro"] (ver src/lib/tema.ts e os tokens --e-*
+   em index.css); o modo claro acima não muda nada. O corpo marfim e os modais
+   abertos dele viram grafite; a faixa escura do topo fica como está.
+   Especificidade: o prefixo soma (0,1,1); quando a regra clara é mais
+   específica, o seletor completo dela é repetido depois do prefixo. */
+
+/* Página: o fundo que aparece abaixo do corpo quando a tela é mais alta */
+:global(html[data-tema="escuro"]) .page {
+  background: var(--e-fundo);
+  color: var(--e-texto);
+}
+
+/* Corpo: os mesmos tokens genéricos, agora com os valores escuros */
+:global(html[data-tema="escuro"]) .corpo {
+  --bg:          var(--e-fundo);
+  --bg-surface:  var(--e-superficie);
+  --bg-elevated: var(--e-elevado);
+  --bg-hover:    var(--e-hover);
+  --border:      var(--e-borda);
+  --border-gold: var(--e-dourado-borda);
+  --gold:        var(--e-link);
+  --gold-light:  var(--e-link);
+  --gold-dark:   var(--e-link-forte);
+  --text:        var(--e-texto);
+  --text-muted:  var(--e-texto-2);
+  --text-dim:    var(--e-texto-3);
+  --danger:      var(--e-erro);
+  --danger-bg:   var(--e-erro-bg);
+  --danger-border: var(--e-erro-borda);
+  --success:     var(--e-sucesso);
+  --success-bg:  var(--e-sucesso-bg);
+  --success-border: var(--e-sucesso-borda);
+  --warning:     var(--e-aviso);
+  --warning-bg:  var(--e-aviso-bg);
+  --warning-border: var(--e-aviso-borda);
+  --shadow-dropdown: var(--e-sombra);
+  --shadow-modal:    var(--e-sombra-modal);
+  background: var(--e-fundo);
+  color: var(--e-texto);
+}
+
+/* Foco: anel marfim em vez de tinta. :where() no prefixo mantém a mesma
+   especificidade da regra clara (0,1,0), para não passar por cima do foco
+   próprio de outros componentes; os modais de .temaOriginal seguem com revert. */
+:global(:where(html[data-tema="escuro"])) :where(.corpo) :where(button, a, input, select, textarea, [tabindex]):not(:where(.temaOriginal *)):focus-visible {
+  outline-color: var(--e-texto);
+}
+
+/* Modais de upload/assistente (.temaOriginal): no modo escuro ficam sempre
+   escuros, na paleta grafite, mesmo com o tema claro do site (data-theme). */
+:global(html[data-tema="escuro"]) .page .temaOriginal {
+  --bg:          var(--e-fundo);
+  --bg-surface:  var(--e-superficie);
+  --bg-elevated: var(--e-elevado);
+  --bg-hover:    var(--e-hover);
+  --border:      var(--e-borda);
+  --border-gold: var(--e-dourado-borda);
+  --text:        var(--e-texto);
+  --text-muted:  var(--e-texto-2);
+  --text-dim:    var(--e-texto-3);
+  --danger-border: rgba(239, 68, 68, 0.28);
+  --success-border: rgba(16, 185, 129, 0.28);
+  --warning-border: rgba(245, 158, 11, 0.28);
+  --shadow-dropdown: var(--e-sombra);
+  --shadow-modal:    var(--e-sombra-modal);
+}
+
+/* ── Escuro: indicadores DFC (cartões tingidos) ── */
+
+:global(html[data-tema="escuro"]) .kpiPositive {
+  background: var(--e-sucesso-bg);
+  border-color: var(--e-sucesso-borda);
+}
+:global(html[data-tema="escuro"]) .kpiPositive .kpiValue { color: var(--e-sucesso); }
+
+:global(html[data-tema="escuro"]) .kpiNegative {
+  background: var(--e-erro-bg);
+  border-color: var(--e-erro-borda);
+}
+:global(html[data-tema="escuro"]) .kpiNegative .kpiValue { color: var(--e-erro); }
+
+:global(html[data-tema="escuro"]) .kpiNeutral { background: var(--e-superficie); }
+
+/* ── Escuro: botões do painel ── */
+
+:global(html[data-tema="escuro"]) .newBtn {
+  background: var(--e-botao-bg);
+  color: var(--e-botao-texto);
+}
+:global(html[data-tema="escuro"]) .newBtn:hover { background: var(--e-botao-hover); }
+
+:global(html[data-tema="escuro"]) .deletePeriodoBtn:hover:not(:disabled) {
+  background: rgba(218, 148, 136, 0.16);
+}
+
+:global(html[data-tema="escuro"]) .cancelBtn:hover { border-color: var(--e-borda-forte); }
+
+/* Vermelho fechado (contraste ≥4.5:1 com o marfim) */
+:global(html[data-tema="escuro"]) .deletePeriodoConfirmBtn {
+  background: #a8473a;
+  color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .editClassBtn {
+  border-color: var(--e-info-borda);
+  background: var(--e-info-bg);
+  color: var(--e-info);
+}
+
+:global(html[data-tema="escuro"]) .editBtn { border-color: var(--e-dourado-borda); }
+
+/* ── Escuro: filtros e campos ── */
+
+:global(html[data-tema="escuro"]) .filterSelect,
+:global(html[data-tema="escuro"]) .filterTextInput,
+:global(html[data-tema="escuro"]) .listboxTrigger {
+  background: var(--e-superficie);
+  border-color: var(--e-borda-campo);
+  color: var(--e-texto);
+}
+:global(html[data-tema="escuro"]) .filterTextInput::placeholder { color: var(--e-texto-3); }
+:global(html[data-tema="escuro"]) .filterTextInput:focus,
+:global(html[data-tema="escuro"]) .listboxTriggerOpen {
+  border-color: var(--e-dourado-borda);
+}
+
+:global(html[data-tema="escuro"]) .listboxOption:hover { background: var(--e-hover); }
+
+:global(html[data-tema="escuro"]) .wizardInput {
+  background: var(--e-elevado);
+  border-color: var(--e-borda-campo);
+  color: var(--e-texto);
+}
+:global(html[data-tema="escuro"]) .wizardInput::placeholder { color: var(--e-texto-3); }
+:global(html[data-tema="escuro"]) .wizardInput:focus { border-color: var(--e-dourado-borda); }
+
+/* ── Escuro: carregamento (shimmer) ── */
+
+:global(html[data-tema="escuro"]) .skeletonRow::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(244, 239, 227, 0.035) 38%,
+    rgba(244, 239, 227, 0.07) 50%,
+    rgba(244, 239, 227, 0.035) 62%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+}
+:global(html[data-tema="escuro"]) .skeletonBadge,
+:global(html[data-tema="escuro"]) .skeletonLine {
+  background: rgba(244, 239, 227, 0.07);
+}
+
+/* ── Escuro: grupos, classificações e lançamentos ── */
+
+:global(html[data-tema="escuro"]) .grupoBlockReceita { border-color: var(--e-sucesso-borda); }
+:global(html[data-tema="escuro"]) .grupoBlockDespesa { border-color: var(--e-erro-borda); }
+
+:global(html[data-tema="escuro"]) .grupoBadgeReceita {
+  background: var(--e-sucesso-bg);
+  color: var(--e-sucesso);
+  box-shadow: inset 0 0 0 1px var(--e-sucesso-borda);
+}
+:global(html[data-tema="escuro"]) .grupoBadgeDespesa {
+  background: var(--e-erro-bg);
+  color: var(--e-erro);
+  box-shadow: inset 0 0 0 1px var(--e-erro-borda);
+}
+
+:global(html[data-tema="escuro"]) .valorPositivo { color: var(--e-sucesso); }
+:global(html[data-tema="escuro"]) .valorNegativo { color: var(--e-erro); }
+
+:global(html[data-tema="escuro"]) .clfBlockHeader:hover { background: var(--e-hover); }
+
+:global(html[data-tema="escuro"]) .lancTable th { background: var(--e-elevado); }
+:global(html[data-tema="escuro"]) .lancTable tr:hover td { background: var(--e-hover); }
+
+:global(html[data-tema="escuro"]) .tdReceita { color: var(--e-sucesso) !important; }
+:global(html[data-tema="escuro"]) .tdDespesa { color: var(--e-erro) !important; }
+
+/* ── Escuro: totalizadores do DRE (fundos opacos: a coluna fixa herda) ──
+   A ordem importa: linha neutra antes das variantes positiva/negativa. */
+
+:global(html[data-tema="escuro"]) .totalizadorRow {
+  background: var(--e-elevado);
+  border-left-color: var(--e-texto-3);
+}
+:global(html[data-tema="escuro"]) .totalizadorPositive {
+  border-left-color: var(--e-sucesso);
+  background: var(--e-sucesso-bg);
+}
+:global(html[data-tema="escuro"]) .totalizadorNegative {
+  border-left-color: var(--e-erro);
+  background: var(--e-erro-bg);
+}
+
+:global(html[data-tema="escuro"]) .accordionMeses .totalizadorRow { background: var(--e-elevado); }
+:global(html[data-tema="escuro"]) .accordionMeses .totalizadorPositive { background: var(--e-sucesso-bg); }
+:global(html[data-tema="escuro"]) .accordionMeses .totalizadorNegative { background: var(--e-erro-bg); }
+
+:global(html[data-tema="escuro"]) .totalizadorPositive .totalizadorLabel,
+:global(html[data-tema="escuro"]) .totalizadorPositive .totalizadorValor { color: var(--e-sucesso); }
+:global(html[data-tema="escuro"]) .totalizadorNegative .totalizadorLabel,
+:global(html[data-tema="escuro"]) .totalizadorNegative .totalizadorValor { color: var(--e-erro); }
+
+/* ── Escuro: modais (exportar, assistente de lançamento, editar, excluir) ── */
+
+:global(html[data-tema="escuro"]) .modalOverlay { background: var(--e-fundo-modal); }
+
+:global(html[data-tema="escuro"]) .stepDotActive {
+  background: var(--e-botao-bg);
+  border-color: var(--e-botao-bg);
+  color: var(--e-botao-texto);
+}
+:global(html[data-tema="escuro"]) .stepDotDone { border-color: var(--e-dourado-borda); }
+:global(html[data-tema="escuro"]) .stepConnectorDone { background: var(--e-dourado-borda); }
+
+:global(html[data-tema="escuro"]) .submit {
+  background: var(--e-botao-bg);
+  color: var(--e-botao-texto);
+}
+:global(html[data-tema="escuro"]) .submit:hover:not(:disabled) { background: var(--e-botao-hover); }
+
+:global(html[data-tema="escuro"]) .aiSpinner { border-color: rgba(194, 160, 99, 0.25); border-top-color: var(--e-link); }
+
+:global(html[data-tema="escuro"]) .tipoBtnReceita:hover {
+  border-color: var(--e-sucesso-borda);
+  background: var(--e-sucesso-bg);
+}
+:global(html[data-tema="escuro"]) .tipoBtnDespesa:hover {
+  border-color: var(--e-erro-borda);
+  background: var(--e-erro-bg);
+}
+:global(html[data-tema="escuro"]) .tipoBtnReceita .tipoArrow { color: var(--e-sucesso); }
+:global(html[data-tema="escuro"]) .tipoBtnDespesa .tipoArrow { color: var(--e-erro); }
+
+:global(html[data-tema="escuro"]) .listbox::-webkit-scrollbar-thumb { background: var(--e-borda-forte); }
+
+:global(html[data-tema="escuro"]) .listboxItem:hover { background: var(--e-hover); }
+:global(html[data-tema="escuro"]) .listboxItemSelected { border-color: var(--e-dourado-borda); }
+
+:global(html[data-tema="escuro"]) .aiSelectedBox {
+  background: var(--e-dourado-bg);
+  border-color: var(--e-dourado-borda);
+}

@@ -322,6 +322,13 @@
   padding: 2px 8px;
 }
 
+/* Funcionário leitor: mesmo selo, em tom neutro (o dourado fica para o "Último acesso") */
+.seloLeitura {
+  color: #5f5a4e;
+  background: #f2eee3;
+  border-color: #e3dccb;
+}
+
 .itemDetalhe {
   font-size: 13.5px;
   color: #5f5a4e;
@@ -938,3 +945,276 @@
   font-size: 13px;
   color: #84621d;
 }
+
+/* ── Modo escuro ───────────────────────────────────────────────────────────────
+   Só vale com html[data-tema="escuro"] (ver src/index.css e src/lib/tema.ts).
+   A faixa escura do topo não muda; o corpo marfim, o rodapé e os modais viram
+   grafite com os tokens --e-*. Nada acima foi alterado: o modo claro segue igual. */
+
+/* Página, corpo e rodapé */
+:global(html[data-tema="escuro"]) .page {
+  background: var(--e-fundo);
+  color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .corpo {
+  background: var(--e-fundo);
+  color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .corpo :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline-color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .rodape {
+  background: var(--e-fundo);
+}
+
+:global(html[data-tema="escuro"]) .linkTermos { color: var(--e-link); }
+:global(html[data-tema="escuro"]) .linkTermos:hover { color: var(--e-link-forte); }
+:global(html[data-tema="escuro"]) .linkTermos:focus-visible { outline-color: var(--e-texto); }
+:global(html[data-tema="escuro"]) .rodapeSeparador { color: var(--e-link); }
+
+/* Busca */
+:global(html[data-tema="escuro"]) .busca {
+  border-color: var(--e-borda-campo);
+  background: var(--e-elevado);
+  color: var(--e-texto-2);
+}
+
+:global(html[data-tema="escuro"]) .busca:focus-within {
+  border-color: var(--e-dourado);
+  outline-color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .buscaInput { color: var(--e-texto); }
+:global(html[data-tema="escuro"]) .buscaInput::placeholder { color: var(--e-texto-3); }
+
+:global(html[data-tema="escuro"]) .semResultado {
+  border-color: var(--e-borda-campo);
+  color: var(--e-texto-2);
+}
+
+/* Lista de empresas */
+:global(html[data-tema="escuro"]) .item {
+  border-color: var(--e-borda);
+  background: var(--e-superficie);
+}
+
+:global(html[data-tema="escuro"]) .item:hover,
+:global(html[data-tema="escuro"]) .item:focus-within {
+  border-color: var(--e-dourado);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* Avatar de iniciais: no claro é tinta sobre o branco; no escuro sumiria no
+   cartão grafite, então vira um quadrado dourado translúcido com contorno. */
+:global(html[data-tema="escuro"]) .avatar {
+  color: var(--e-link-forte);
+  background: var(--e-dourado-bg);
+  box-shadow: inset 0 0 0 1px var(--e-dourado-borda);
+}
+
+:global(html[data-tema="escuro"]) .avatarImg { border-color: var(--e-borda); }
+
+:global(html[data-tema="escuro"]) .itemNome { color: var(--e-texto); }
+
+:global(html[data-tema="escuro"]) .selo {
+  color: var(--e-link);
+  background: var(--e-dourado-bg);
+  border-color: var(--e-dourado-borda);
+}
+
+:global(html[data-tema="escuro"]) .selo.seloLeitura {
+  color: var(--e-texto-2);
+  background: var(--e-hover);
+  border-color: var(--e-borda-forte);
+}
+
+:global(html[data-tema="escuro"]) .itemDetalhe { color: var(--e-texto-2); }
+
+:global(html[data-tema="escuro"]) .itemSeta { color: var(--e-texto-2); }
+
+:global(html[data-tema="escuro"]) .item:hover .itemSeta,
+:global(html[data-tema="escuro"]) .itemPrincipal:focus-visible .itemSeta {
+  color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .itemConfig {
+  color: var(--e-texto-2);
+  border-left-color: var(--e-borda);
+}
+
+:global(html[data-tema="escuro"]) .itemConfig:hover {
+  color: var(--e-texto);
+  background: var(--e-hover);
+}
+
+/* Nova empresa */
+:global(html[data-tema="escuro"]) .itemNova {
+  border-color: var(--e-borda-campo);
+}
+
+:global(html[data-tema="escuro"]) .itemNova:hover {
+  border-color: var(--e-dourado);
+  background: var(--e-superficie);
+}
+
+:global(html[data-tema="escuro"]) .itemNovaIcone {
+  border-color: var(--e-borda-forte);
+  background: var(--e-elevado);
+  color: var(--e-texto);
+}
+
+/* Sem empresas: o "Criar empresa" continua sendo o cartão principal */
+:global(html[data-tema="escuro"]) .itemNovaWrapDestaque .itemNova {
+  border-color: var(--e-borda);
+  background: var(--e-superficie);
+}
+
+:global(html[data-tema="escuro"]) .itemNovaWrapDestaque .itemNova:hover {
+  border-color: var(--e-dourado);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+:global(html[data-tema="escuro"]) .itemNovaWrapDestaque .itemNovaIcone {
+  border-color: var(--e-botao-bg);
+  background: var(--e-botao-bg);
+  color: var(--e-botao-texto);
+}
+
+/* Carregamento (só a lista do corpo; o esqueleto da faixa não muda) */
+:global(html[data-tema="escuro"]) .skelItem {
+  border-color: var(--e-borda);
+  background: var(--e-superficie);
+}
+
+:global(html[data-tema="escuro"]) .skelAvatar { background: var(--e-hover); }
+:global(html[data-tema="escuro"]) .skelTexto { background: var(--e-hover); }
+:global(html[data-tema="escuro"]) .skelTextoCurto { background: var(--e-elevado); }
+
+/* Modais */
+:global(html[data-tema="escuro"]) .modalBackdrop {
+  background: var(--e-fundo-modal);
+}
+
+:global(html[data-tema="escuro"]) .modal {
+  background: var(--e-superficie);
+  color: var(--e-texto);
+  border-color: var(--e-borda);
+  scrollbar-color: var(--e-borda-forte) transparent;
+  box-shadow: var(--e-sombra-modal);
+}
+
+:global(html[data-tema="escuro"]) .modal :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline-color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .modalTitulo { color: var(--e-texto); }
+
+:global(html[data-tema="escuro"]) .deleteWarning { color: var(--e-texto); }
+
+/* Acessos da empresa */
+:global(html[data-tema="escuro"]) .membersSection {
+  border-color: var(--e-borda);
+  background: var(--e-elevado);
+}
+
+:global(html[data-tema="escuro"]) .membersEyebrow { color: var(--e-texto-2); }
+:global(html[data-tema="escuro"]) .membersTitle { color: var(--e-texto); }
+
+:global(html[data-tema="escuro"]) .memberItem {
+  border-color: var(--e-borda);
+  background: var(--e-superficie);
+}
+
+:global(html[data-tema="escuro"]) .memberName { color: var(--e-texto); }
+:global(html[data-tema="escuro"]) .memberEmail { color: var(--e-texto-2); }
+
+:global(html[data-tema="escuro"]) .memberBadgeAdmin {
+  color: var(--e-link);
+  background: var(--e-dourado-bg);
+  border-color: var(--e-dourado-borda);
+}
+
+:global(html[data-tema="escuro"]) .memberBadgeMember,
+:global(html[data-tema="escuro"]) .memberBadgeNeutral {
+  color: var(--e-texto-2);
+  background: var(--e-hover);
+  border-color: var(--e-borda-forte);
+}
+
+:global(html[data-tema="escuro"]) .membersHint { color: var(--e-texto-2); }
+
+/* Formulário */
+:global(html[data-tema="escuro"]) .label { color: var(--e-texto-2); }
+:global(html[data-tema="escuro"]) .opcional { color: var(--e-texto-2); }
+
+:global(html[data-tema="escuro"]) .input {
+  background: var(--e-elevado);
+  border-color: var(--e-borda-campo);
+  color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .input:hover:not(:disabled) { border-color: rgba(244, 239, 227, 0.34); }
+/* Repete o dourado do foco: a regra .input acima ganharia de .input:focus */
+:global(html[data-tema="escuro"]) .input:focus { border-color: var(--e-dourado); }
+:global(html[data-tema="escuro"]) .input::placeholder { color: var(--e-texto-3); }
+
+:global(html[data-tema="escuro"]) .input[type='file'] { color: var(--e-texto-2); }
+
+:global(html[data-tema="escuro"]) .input::file-selector-button {
+  border-color: var(--e-borda-forte);
+  background: var(--e-hover);
+  color: var(--e-texto);
+}
+:global(html[data-tema="escuro"]) .input::file-selector-button:hover { background: var(--e-borda-forte); }
+
+:global(html[data-tema="escuro"]) .inputHint { color: var(--e-texto-2); }
+
+:global(html[data-tema="escuro"]) .cardBackgroundPreview {
+  border-color: var(--e-borda);
+  background-color: var(--e-elevado);
+}
+
+:global(html[data-tema="escuro"]) .removeImageButton {
+  border-color: var(--e-erro-borda);
+  background: var(--e-elevado);
+  color: var(--e-erro);
+}
+:global(html[data-tema="escuro"]) .removeImageButton:hover:not(:disabled) { background: var(--e-erro-bg); }
+
+:global(html[data-tema="escuro"]) .erro {
+  border-color: var(--e-erro-borda);
+  background: var(--e-erro-bg);
+  color: var(--e-erro);
+}
+
+/* Botões */
+:global(html[data-tema="escuro"]) .btnCancelar {
+  background: var(--e-elevado);
+  border-color: var(--e-borda-campo);
+  color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .btnCancelar:hover:not(:disabled) {
+  border-color: rgba(244, 239, 227, 0.36);
+  background: var(--e-hover);
+}
+
+/* Botão principal: tinta com texto marfim no claro; no escuro inverte */
+:global(html[data-tema="escuro"]) .btnCriar {
+  background: var(--e-botao-bg);
+  border-color: var(--e-botao-bg);
+  color: var(--e-botao-texto);
+}
+
+:global(html[data-tema="escuro"]) .btnCriar:hover:not(:disabled) {
+  background: var(--e-botao-hover);
+  border-color: var(--e-botao-hover);
+}
+
+/* O vermelho #9a3b2c some no grafite (contraste ~2:1); no escuro o link usa o
+   erro claro e, no hover, clareia em vez de escurecer. */
+:global(html[data-tema="escuro"]) .btnExcluirLink { color: var(--e-erro); }
+:global(html[data-tema="escuro"]) .btnExcluirLink:hover:not(:disabled) { color: #ecb5ab; }

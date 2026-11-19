@@ -424,6 +424,10 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
   // Admin
   const [isAdmin,          setIsAdmin]          = useState(false)
   const [canExcluirPeriodo, setCanExcluirPeriodo] = useState(false)
+  // Permissão de alterar lançamentos nesta empresa, lida do banco ao abrir a tela.
+  // null = ainda lendo: vale como leitura, para os botões de alteração não piscarem para o leitor.
+  const [podeEditar,       setPodeEditar]       = useState<boolean | null>(null)
+  const somenteLeitura = podeEditar !== true
   const [buscaLancamento, setBuscaLancamento] = useSessionStorageState(
     `${storagePrefix}:busca-lancamento`,
     '',
@@ -525,12 +529,15 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
 
           const { data: membro } = await supabase
             .from('empresa_membros')
-            .select('user_id, role')
+            .select('user_id, role, permissao')
             .eq('empresa_id', empresa.id)
             .eq('user_id', myId)
             .maybeSingle()
 
-          setCanExcluirPeriodo(admin || empresa.created_by === myId || membro?.role === 'admin')
+          // ADM do sistema, quem criou a empresa e o titular sempre alteram; o funcionário, só como editor.
+          const editor = admin || empresa.created_by === myId || membro?.role === 'admin' || membro?.permissao === 'editor'
+          setPodeEditar(editor)
+          setCanExcluirPeriodo(editor && (admin || empresa.created_by === myId || membro?.role === 'admin'))
 
           // Validate that user still has access to this empresa (sessionStorage may be stale)
           if (!admin && !membro) {
@@ -990,6 +997,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
   [classificacoes, form.tipo])
 
   const openWizard = () => {
+    if (!podeEditar) return
     setEditingId(null)
     setForm(INITIAL_FORM)
     setStep(1)
@@ -1000,6 +1008,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
   }
 
   const openEditWizard = (item: DreLancamento) => {
+    if (!podeEditar) return
     setEditingId(item.id)
     setForm({
       tipo:              item.tipo,
@@ -1027,6 +1036,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
   }
 
   const openEditClassModal = (item: DreLancamento) => {
+    if (!podeEditar) return
     setEditClassItem(item)
     setEditClassForm({ tipo: item.tipo, classificacaoNome: item.classificacao, grupo: item.grupo })
     setEditClassError('')
@@ -1050,7 +1060,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
   const exportBackdropDismiss = useBackdropDismiss(() => setShowExportModal(false))
 
   const salvarClassificacao = async () => {
-    if (!editClassItem) return
+    if (!podeEditar || !editClassItem) return
     if (!editClassForm.classificacaoNome || !editClassForm.grupo.trim() || !editClassForm.tipo) {
       setEditClassError('Preencha todos os campos.')
       return
@@ -1137,12 +1147,19 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
   }
 
   const deleteLancamento = async (item: DreLancamento) => {
+    if (!podeEditar) return
     const confirmado = window.confirm(
       `Excluir lançamento "${item.descricao ?? '(sem descrição)'}" de ${moeda(Number(item.valor))}?`
     )
     if (!confirmado) return
-    const { error } = await supabase.from('dre_lancamentos').delete().eq('id', item.id)
+    // .select('id'): sem permissão, o banco não apaga nada e não dá erro; aqui isso vira aviso.
+    const { data: apagados, error } = await supabase
+      .from('dre_lancamentos').delete()
+      .eq('id', item.id)
+      .eq('empresa_id', empresa.id)
+      .select('id')
     if (error) { toast.error(error.message, 'Não foi possível excluir o lançamento.'); return }
+    if (!apagados?.length) { toast.error('Não foi possível excluir. Verifique se você tem permissão para editar esta empresa.'); fetchLancamentos(); return }
     fetchLancamentos()
   }
 
@@ -1175,6 +1192,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
   ), [lancamentosPeriodo, tipoExclusao])
 
   const abrirExcluirPeriodo = () => {
+    if (!canExcluirPeriodo) return
     setTipoExclusao(tipoFiltro)
     setShowDeletePeriodo(true)
   }
@@ -1186,6 +1204,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
     try {
       // Deleta diretamente no servidor por filtro de data (evita limite de URL com listas de IDs)
       const meses = mesesFiltro.length > 0 ? mesesFiltro : null
+      let totalApagado = 0
       const excluirIntervalo = async (inicio: string, fim: string) => {
         let query = supabase
           .from('dre_lancamentos').delete()
@@ -1193,8 +1212,9 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
           .gte('data_lancamento', inicio)
           .lt('data_lancamento', fim)
         if (tipoExclusao !== 'todos') query = query.eq('tipo', tipoExclusao)
-        const { error } = await query
+        const { data: apagados, error } = await query.select('id')
         if (error) throw new Error(error.message)
+        totalApagado += apagados?.length ?? 0
       }
 
       if (meses) {
@@ -1210,6 +1230,9 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
         // Deleta o ano inteiro de uma vez
         await excluirIntervalo(`${anoFiltro}-01-01`, `${Number(anoFiltro) + 1}-01-01`)
       }
+
+      // Havia lançamentos no período e nada saiu: o banco recusou (sem permissão).
+      if (totalApagado === 0) throw new Error('Não foi possível excluir. Verifique se você tem permissão para editar esta empresa.')
 
       setShowDeletePeriodo(false)
       setMesesFiltro([])
@@ -1232,6 +1255,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
   })()
 
   const ensureGrupoCatalogado = async (grupoNomeRaw: string, tipoRaw: '' | 'receita' | 'despesa') => {
+    if (!podeEditar) return { ok: false as const, error: 'Seu acesso a esta empresa é só de leitura.' }
     const grupoNome = grupoNomeRaw.trim()
     if (!grupoNome) return { ok: false as const, error: 'Grupo vazio.' }
 
@@ -1266,7 +1290,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
 
   // After step 4 (valor): consulta histórico primeiro, só chama IA se não encontrar
   const goToStep5 = async () => {
-    if (valorNumerico <= 0) return
+    if (!podeEditar || valorNumerico <= 0) return
     setStep(5)
     setAiLoading(true)
     setAiError('')
@@ -1364,6 +1388,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
 
   const salvar = async () => {
     setError('')
+    if (!podeEditar) return
     if (valorNumerico <= 0 || !form.classificacaoNome || !form.grupo.trim()) {
       setError('Preencha todos os campos.')
       return
@@ -1624,6 +1649,14 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
 
           <p className={styles.eyebrow}>
             Análise DFC · {empresa.nome}{empresa.cnpj ? ` · ${empresa.cnpj}` : ''}
+            {podeEditar === false && (
+              <span
+                className={styles.seloLeitura}
+                title="Seu acesso a esta empresa é de leitura: você consulta e exporta, sem alterar lançamentos."
+              >
+                Somente leitura
+              </span>
+            )}
           </p>
 
           <div className={styles.faixaGrid}>
@@ -1632,12 +1665,14 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
               <p className={styles.apoio}>{diagnostico.frase}</p>
             </div>
             <div className={styles.acoes}>
-              <button className={styles.btnUpload} onClick={() => setShowUpload(true)}>
-                <span className={styles.btnUploadInfo}>ⓘ</span>
-                <span className={styles.btnUploadTooltip}>Importe um extrato bancário (.xlsx, .xls ou .csv). A IA classifica automaticamente os lançamentos.</span>
-                <span className={styles.btnUploadEyebrow}>• IA • OPENAI</span>
-                <span className={styles.btnUploadTitle}>Importar Extrato</span>
-              </button>
+              {!somenteLeitura && (
+                <button className={styles.btnUpload} onClick={() => setShowUpload(true)}>
+                  <span className={styles.btnUploadInfo}>ⓘ</span>
+                  <span className={styles.btnUploadTooltip}>Importe um extrato bancário (.xlsx, .xls ou .csv). A IA classifica automaticamente os lançamentos.</span>
+                  <span className={styles.btnUploadEyebrow}>• IA • OPENAI</span>
+                  <span className={styles.btnUploadTitle}>Importar Extrato</span>
+                </button>
+              )}
               <button className={styles.btnAssistente} onClick={() => setShowAssistente(true)}>
                 <span className={styles.btnAssistenteInfo}>ⓘ</span>
                 <span className={styles.btnAssistenteTooltip}>Abre o Assistente de DFC — uma IA treinada para analisar seus lançamentos e responder perguntas como "qual meu maior custo?", "como está minha margem?" ou "onde posso reduzir despesas?". Powered by OpenAI.</span>
@@ -1654,9 +1689,11 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
                 <span className={styles.btnExportEyebrow}>• RELATÓRIO</span>
                 <span className={styles.btnExportTitle}>Exportar Relatório</span>
               </button>
-              <button type="button" className={styles.btnNovoFaixa} onClick={openWizard}>
-                + Novo lançamento
-              </button>
+              {!somenteLeitura && (
+                <button type="button" className={styles.btnNovoFaixa} onClick={openWizard}>
+                  + Novo lançamento
+                </button>
+              )}
             </div>
           </div>
 
@@ -1919,11 +1956,12 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
             onAdiar={tour.adiar}
             onImportar={() => setShowUpload(true)}
             onNovoLancamento={openWizard}
+            somenteLeitura={podeEditar === false}
           />
 
           {/* ── Modal Upload Extrato ── */}
-          <ModalTransition open={showUpload}>
-            {showUpload && (
+          <ModalTransition open={showUpload && !somenteLeitura}>
+            {showUpload && !somenteLeitura && (
               <div
                 className={`${styles.uploadOverlay} ${styles.temaOriginal}`}
                 onPointerDown={uploadBackdropDismiss.handleBackdropPointerDown}
@@ -1983,7 +2021,9 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
                   </button>
                 )}
 
-                <button className={styles.newBtn} onClick={openWizard}>+ Novo lançamento</button>
+                {!somenteLeitura && (
+                  <button className={styles.newBtn} onClick={openWizard}>+ Novo lançamento</button>
+                )}
               </div>
             </div>
 
@@ -2011,8 +2051,13 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
               </div>
             ) : lancamentosAgrupados.length === 0 ? (
               <div className={styles.emptyAccordion}>
-                Nenhum lançamento encontrado.{' '}
-                <button className={styles.emptyAction} onClick={openWizard}>Adicionar agora</button>
+                Nenhum lançamento encontrado.
+                {!somenteLeitura && (
+                  <>
+                    {' '}
+                    <button className={styles.emptyAction} onClick={openWizard}>Adicionar agora</button>
+                  </>
+                )}
               </div>
             ) : (
               <div className={dreGridStyle ? styles.dreScroll : undefined}>
@@ -2171,7 +2216,7 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
                                 {cAberto && (
                                   <table className={styles.lancTable}>
                                     <thead>
-                                      <tr><th>Data</th><th>Descrição</th><th>Valor</th><th className={styles.thPct}>% Rec. Op.</th><th></th></tr>
+                                      <tr><th>Data</th><th>Descrição</th><th>Valor</th><th className={styles.thPct}>% Rec. Op.</th>{!somenteLeitura && <th></th>}</tr>
                                     </thead>
                                     <tbody>
                                       {clf.items.map(item => (
@@ -2186,17 +2231,19 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
                                               ? pct((Number(item.valor) / kpis.receitaOperacional) * 100)
                                               : '—'}
                                           </td>
-                                          <td className={styles.actionCell}>
-                                            <button className={styles.editClassBtn} onClick={() => openEditClassModal(item)}>
-                                              Editar Classificação
-                                            </button>
-                                            <button className={styles.editBtn} onClick={() => openEditWizard(item)}>
-                                              Editar
-                                            </button>
-                                            <button className={styles.deleteBtn} onClick={() => deleteLancamento(item)}>
-                                              Excluir
-                                            </button>
-                                          </td>
+                                          {!somenteLeitura && (
+                                            <td className={styles.actionCell}>
+                                              <button className={styles.editClassBtn} onClick={() => openEditClassModal(item)}>
+                                                Editar Classificação
+                                              </button>
+                                              <button className={styles.editBtn} onClick={() => openEditWizard(item)}>
+                                                Editar
+                                              </button>
+                                              <button className={styles.deleteBtn} onClick={() => deleteLancamento(item)}>
+                                                Excluir
+                                              </button>
+                                            </td>
+                                          )}
                                         </tr>
                                       ))}
                                     </tbody>
@@ -2216,8 +2263,8 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
           </section>
 
           {/* ── Wizard modal ── */}
-          <ModalTransition open={showWizard}>
-            {showWizard && (
+          <ModalTransition open={showWizard && !somenteLeitura}>
+            {showWizard && !somenteLeitura && (
             <div
               className={styles.modalOverlay}
               onPointerDown={wizardBackdropDismiss.handleBackdropPointerDown}
@@ -2464,8 +2511,8 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
           </ModalTransition>
 
           {/* ── Modal: excluir período ── */}
-          <ModalTransition open={showDeletePeriodo}>
-            {showDeletePeriodo && (
+          <ModalTransition open={showDeletePeriodo && canExcluirPeriodo}>
+            {showDeletePeriodo && canExcluirPeriodo && (
             <div
               className={styles.modalOverlay}
               onPointerDown={deletePeriodoBackdropDismiss.handleBackdropPointerDown}
@@ -2551,8 +2598,8 @@ export default function AnaliseDrePage({ empresa, onTrocarEmpresa, menuPerfil, o
           </ModalTransition>
 
           {/* ── Modal: Editar Classificação ── */}
-          <ModalTransition open={showEditClassModal && !!editClassItem}>
-            {showEditClassModal && editClassItem && (
+          <ModalTransition open={showEditClassModal && !!editClassItem && !somenteLeitura}>
+            {showEditClassModal && editClassItem && !somenteLeitura && (
             <div
               className={styles.modalOverlay}
               onPointerDown={editClassBackdropDismiss.handleBackdropPointerDown}

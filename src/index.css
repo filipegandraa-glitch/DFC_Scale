@@ -114,3 +114,57 @@ body {
 /* panel = primeiro filho do overlay */
 [data-modal-state="open"]    > *:first-child > *:first-child { animation: modalPanelIn  0.26s cubic-bezier(0.16,1,0.3,1) !important; }
 [data-modal-state="closing"] > *:first-child > *:first-child { animation: modalPanelOut 0.18s ease forwards !important; }
+
+/* ── Modo escuro do DFC (html[data-tema="escuro"], ver src/lib/tema.ts) ──────
+   O modo claro é o padrão e não usa nada daqui. No escuro, o corpo marfim vira
+   grafite; a faixa escura do topo continua igual. Paleta ClinicScale V1.0:
+   Onyx/Grafite no fundo, Marfim no texto, Dourado com parcimônia e as cores
+   semânticas em tom fechado. Os módulos de CSS usam estes --e-* nas regras
+   :global(html[data-tema="escuro"]) ... */
+html[data-tema="escuro"] {
+  color-scheme: dark;
+
+  --e-fundo:          #0e0d0a;  /* fundo do corpo (antes marfim) */
+  --e-fundo-2:        #12110d;  /* faixas/zebra discretas */
+  --e-superficie:     #16140f;  /* cartões, tabelas, modais (antes branco) */
+  --e-elevado:        #1c1a14;  /* cabeçalhos de tabela, campos, menus */
+  --e-hover:          #23201a;
+  --e-borda:          #2a261c;
+  --e-borda-suave:    #221f17;
+  --e-borda-forte:    #3a3426;
+  --e-borda-campo:    rgba(244, 239, 227, 0.2);
+
+  --e-texto:          #f4efe3;  /* antes #16140f */
+  --e-texto-2:        #b9b2a1;  /* antes #5f5a4e */
+  --e-texto-3:        #8e8778;  /* antes #8a8476 */
+
+  --e-dourado:        #c2a063;
+  --e-link:           #d4b57a;  /* antes #84621d */
+  --e-link-forte:     #e8d9b5;  /* antes #6b4f12 */
+  --e-dourado-bg:     rgba(194, 160, 99, 0.12);
+  --e-dourado-borda:  rgba(194, 160, 99, 0.4);
+
+  --e-sucesso:        #6fc2a3;
+  --e-sucesso-bg:     #11251f;
+  --e-sucesso-borda:  #1f4a3c;
+  --e-erro:           #da9488;
+  --e-erro-bg:        #251210;
+  --e-erro-borda:     #4a231e;
+  --e-aviso:          #e6b36a;
+  --e-aviso-bg:       #241a0c;
+  --e-aviso-borda:    #4a3616;
+  --e-info:           #82b7c3;
+  --e-info-bg:        #0f2329;
+  --e-info-borda:     #1f4652;
+
+  /* botão principal: no claro é tinta escura com texto marfim; no escuro inverte */
+  --e-botao-bg:       #f4efe3;
+  --e-botao-texto:    #16140f;
+  --e-botao-hover:    #e8d9b5;
+
+  --e-sombra:         0 10px 30px rgba(0, 0, 0, 0.45);
+  --e-sombra-modal:   0 24px 64px rgba(0, 0, 0, 0.6);
+  --e-fundo-modal:    rgba(0, 0, 0, 0.7);
+}
+
+html[data-tema="escuro"] body { background: var(--e-fundo); }

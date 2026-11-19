@@ -1,0 +1,614 @@
+/* Funcionários (Configuração geral): faixa, menu lateral e tokens vêm de
+   PerfilAdminPage.module.css (base). Corpo marfim, cartões brancos e modais claros
+   no padrão das outras telas do DFC Scale. */
+
+.page {
+  --coluna: 880px;
+}
+
+/* ── Topo da lista ── */
+.topo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+}
+
+.contagem {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--tinta-2);
+}
+
+.btnAdicionar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Vazio ── */
+.vazio {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.vazioTitulo {
+  margin: 0;
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--tinta);
+}
+
+.vazioTexto {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--tinta-2);
+}
+
+.vazioLista {
+  margin-top: 22px;
+  padding: 22px 24px;
+  border: 1px dashed var(--borda-campo);
+  border-radius: 14px;
+  background: var(--marfim-claro);
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--tinta-2);
+}
+
+.vazioLista p { margin: 0; max-width: 620px; }
+
+/* ── Lista de funcionários ── */
+.lista {
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cartao {
+  padding: 18px 20px;
+  border: 1px solid var(--borda-suave);
+  border-radius: 14px;
+  background: var(--superficie);
+  box-shadow: 0 1px 2px rgba(22, 20, 15, 0.04);
+}
+
+.cartaoTopo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #efe0b6 0%, #c2a063 100%);
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #16140f;
+}
+
+.identidade {
+  flex: 1;
+  min-width: 0;
+}
+
+.nome {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+
+.email {
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  color: var(--tinta-2);
+  overflow-wrap: anywhere;
+}
+
+.seloPendente {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border: 1px solid var(--aviso-borda);
+  border-radius: 999px;
+  background: var(--aviso-bg);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--aviso);
+}
+
+.acoesCartao {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 14px;
+}
+
+.linkAcao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--link);
+  cursor: pointer;
+}
+
+.linkAcao:hover:not(:disabled) { color: var(--link-forte); }
+.linkAcao:disabled { color: var(--tinta-3); cursor: default; }
+
+.acessos {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 14px 0 0 54px;
+  border-top: 1px solid var(--borda-suave);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.acesso {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 5px 6px 5px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--marfim-claro);
+}
+
+.acessoEmpresa {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+
+.seloLeitor,
+.seloEditor {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.seloLeitor {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.seloEditor {
+  background: var(--sucesso-bg);
+  color: var(--sucesso);
+}
+
+/* ── Legenda ── */
+.legenda {
+  margin: 28px 0 0;
+  padding: 18px 20px;
+  border: 1px solid var(--borda-suave);
+  border-radius: 14px;
+  background: var(--marfim-claro);
+  display: grid;
+  gap: 10px;
+}
+
+.legenda div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.legenda dt { font-weight: 700; color: var(--tinta); }
+.legenda dd { margin: 0; color: var(--tinta-2); }
+
+/* ── Modais (claros, como os da tela de Empresas) ── */
+.fundoModal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(22, 20, 15, 0.55);
+  backdrop-filter: blur(3px);
+  overflow-y: auto;
+}
+
+.modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  margin: auto;
+  padding: 30px;
+  border: 1px solid #e3dccb;
+  border-radius: 16px;
+  background: #fbf9f4;
+  color: #16140f;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 24px 64px rgba(22, 20, 15, 0.2);
+  font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif;
+}
+
+.modal :where(button, input, [tabindex]):focus-visible {
+  outline: 2px solid #16140f;
+  outline-offset: 2px;
+}
+
+.modalTitulo {
+  margin: 0;
+  font-family: 'Sora', 'Hanken Grotesk', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.modalApoio {
+  margin: -8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: #5f5a4e;
+  overflow-wrap: anywhere;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.rotulo {
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #16140f;
+}
+
+.opcional {
+  font-weight: 400;
+  color: #8a8476;
+}
+
+.input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid rgba(22, 20, 15, 0.2);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #16140f;
+  font: inherit;
+  font-size: 15px;
+}
+
+.input::placeholder { color: #8a8476; }
+
+.input:focus-visible {
+  outline: none;
+  border-color: #16140f;
+  box-shadow: 0 0 0 3px rgba(194, 160, 99, 0.28);
+}
+
+/* Empresas e permissões */
+.empresas {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.listaEmpresas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e3dccb;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.linhaEmpresa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border-top: 1px solid #ece6d7;
+}
+
+.linhaEmpresa:first-child { border-top: none; }
+.linhaEmpresaMarcada { background: #fffdf8; }
+
+.checkEmpresa {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.checkEmpresa input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: #16140f;
+}
+
+.nomeEmpresa {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #16140f;
+  overflow-wrap: anywhere;
+}
+
+.segmento {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid #e3dccb;
+  border-radius: 10px;
+  background: #f2eee3;
+}
+
+.segmentoOpcao {
+  min-width: 72px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #5f5a4e;
+  cursor: pointer;
+}
+
+.segmentoOpcao:disabled {
+  color: #b5afa1;
+  cursor: default;
+}
+
+.segmentoAtivo {
+  background: #16140f;
+  color: #f4efe3;
+}
+
+.segmentoAtivo:disabled {
+  background: #b5afa1;
+  color: #fbf9f4;
+}
+
+.dica {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #5f5a4e;
+}
+
+.dica strong { color: #16140f; }
+
+.erro {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e5c3bc;
+  border-radius: 10px;
+  background: #f8e7e3;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #9a3b2c;
+}
+
+.acoesModal {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.acoesModalSeparadas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.linkPerigo {
+  padding: 6px 2px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #9a3b2c;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.linkPerigo:disabled { color: #b5afa1; cursor: default; }
+
+.btnPerigo {
+  padding: 11px 22px;
+  border: 1px solid #7a2e27;
+  border-radius: 10px;
+  background: #7a2e27;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fbf9f4;
+  cursor: pointer;
+}
+
+.btnPerigo:hover:not(:disabled) { background: #652520; }
+.btnPerigo:disabled { opacity: 0.6; cursor: default; }
+
+/* ── Celular ── */
+@media (max-width: 640px) {
+  .cartaoTopo { flex-wrap: wrap; }
+  .acoesCartao { flex-basis: 100%; justify-content: flex-start; padding-left: 54px; }
+  .acessos { padding-left: 0; }
+  .legenda div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .modal { padding: 24px 18px; }
+  .linhaEmpresa { padding: 12px; }
+}
+
+/* ── Modo escuro ──
+   Tokens do corpo já trocados em PerfilAdminPage.module.css (base). Aqui: sombra
+   do cartão e os modais, que usam cores fixas. */
+:global(html[data-tema="escuro"]) .cartao {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Modais */
+:global(html[data-tema="escuro"]) .fundoModal {
+  background: var(--e-fundo-modal);
+}
+
+:global(html[data-tema="escuro"]) .modal {
+  border-color: var(--e-borda);
+  background: var(--e-superficie);
+  color: var(--e-texto);
+  box-shadow: var(--e-sombra-modal);
+}
+
+:global(html[data-tema="escuro"]) .modal :where(button, input, [tabindex]):focus-visible {
+  outline-color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .modalApoio {
+  color: var(--e-texto-2);
+}
+
+:global(html[data-tema="escuro"]) .rotulo {
+  color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .opcional {
+  color: var(--e-texto-3);
+}
+
+:global(html[data-tema="escuro"]) .input {
+  border-color: var(--e-borda-campo);
+  background: var(--e-elevado);
+  color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .input::placeholder {
+  color: var(--e-texto-3);
+}
+
+:global(html[data-tema="escuro"]) .input:focus-visible {
+  border-color: var(--e-texto);
+}
+
+/* Empresas e permissões */
+:global(html[data-tema="escuro"]) .listaEmpresas {
+  border-color: var(--e-borda);
+  background: var(--e-elevado);
+}
+
+:global(html[data-tema="escuro"]) .linhaEmpresa {
+  border-top-color: var(--e-borda);
+}
+
+:global(html[data-tema="escuro"]) .linhaEmpresaMarcada {
+  background: var(--e-hover);
+}
+
+:global(html[data-tema="escuro"]) .checkEmpresa input {
+  accent-color: var(--e-dourado);
+}
+
+:global(html[data-tema="escuro"]) .nomeEmpresa {
+  color: var(--e-texto);
+}
+
+/* Seletor Leitor/Editor: trilho grafite, opção ativa marfim */
+:global(html[data-tema="escuro"]) .segmento {
+  border-color: var(--e-borda);
+  background: var(--e-fundo);
+}
+
+:global(html[data-tema="escuro"]) .segmentoOpcao {
+  color: var(--e-texto-2);
+}
+
+:global(html[data-tema="escuro"]) .segmentoOpcao:disabled {
+  color: var(--e-texto-3);
+}
+
+:global(html[data-tema="escuro"]) .segmentoAtivo {
+  background: var(--e-botao-bg);
+  color: var(--e-botao-texto);
+}
+
+:global(html[data-tema="escuro"]) .segmentoAtivo:disabled {
+  background: var(--e-borda-forte);
+  color: var(--e-texto-2);
+}
+
+:global(html[data-tema="escuro"]) .dica {
+  color: var(--e-texto-2);
+}
+
+:global(html[data-tema="escuro"]) .dica strong {
+  color: var(--e-texto);
+}
+
+:global(html[data-tema="escuro"]) .erro {
+  border-color: var(--e-erro-borda);
+  background: var(--e-erro-bg);
+  color: var(--e-erro);
+}
+
+:global(html[data-tema="escuro"]) .linkPerigo {
+  color: var(--e-erro);
+}
+
+:global(html[data-tema="escuro"]) .linkPerigo:disabled {
+  color: var(--e-texto-3);
+}

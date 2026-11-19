@@ -17,6 +17,10 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { ASSUNTO_BOAS_VINDAS, htmlBoasVindas, textoBoasVindas } from './email.ts'
+import {
+  assuntoBoasVindasFuncionario, htmlBoasVindasFuncionario, textoBoasVindasFuncionario,
+  type DadosBoasVindasFuncionario, type EmpresaLiberada,
+} from './emailFuncionario.ts'
 
 const APP_TERMOS = 'dfc-clinicscale'
 const JANELA_PRIMEIRO_ACESSO_MS = 30 * 60 * 1000
@@ -90,11 +94,46 @@ Deno.serve(async (req: Request) => {
       return json({ enviado: false, motivo: 'nao_e_primeiro_acesso' })
     }
 
-    const { data: perfil } = await admin.from('profiles').select('name').eq('id', user.id).maybeSingle()
+    const { data: perfil } = await admin.from('profiles').select('name, tipo_usuario').eq('id', user.id).maybeSingle()
     const dados = {
       primeiroNome: primeiroNome(perfil?.name, user.email),
       email: user.email,
       siteUrl: (Deno.env.get('DFC_SITE_URL') || SITE_PADRAO).replace(/\/+$/, ''),
+    }
+
+    // Funcionário: e-mail próprio, com as empresas liberadas e quem liberou.
+    let mensagem = { assunto: ASSUNTO_BOAS_VINDAS, html: htmlBoasVindas(dados), texto: textoBoasVindas(dados) }
+    if (perfil?.tipo_usuario === 'colaborador') {
+      const { data: vinculos } = await admin
+        .from('empresa_membros')
+        .select('empresa_id, permissao')
+        .eq('user_id', user.id)
+        .eq('role', 'membro')
+      const ids = (vinculos ?? []).map(v => v.empresa_id as string)
+      const { data: empresas } = ids.length
+        ? await admin.from('empresas').select('id, nome, created_by').in('id', ids).eq('ativo', true).order('nome')
+        : { data: [] as { id: string; nome: string; created_by: string | null }[] }
+      const permissaoPorEmpresa = new Map((vinculos ?? []).map(v => [v.empresa_id as string, v.permissao as string]))
+      const liberadas: EmpresaLiberada[] = (empresas ?? []).map(e => ({
+        nome: (e.nome as string) || 'Empresa',
+        permissao: permissaoPorEmpresa.get(e.id as string) === 'leitor' ? 'leitor' : 'editor',
+      }))
+      if (liberadas.length > 0) {
+        const criador = (empresas ?? [])[0]?.created_by as string | null | undefined
+        const { data: titular } = criador
+          ? await admin.from('profiles').select('name').eq('id', criador).maybeSingle()
+          : { data: null }
+        const dadosFuncionario: DadosBoasVindasFuncionario = {
+          ...dados,
+          titular: (titular?.name as string | undefined)?.trim() || 'O titular da clínica',
+          empresas: liberadas,
+        }
+        mensagem = {
+          assunto: assuntoBoasVindasFuncionario(dadosFuncionario),
+          html: htmlBoasVindasFuncionario(dadosFuncionario),
+          texto: textoBoasVindasFuncionario(dadosFuncionario),
+        }
+      }
     }
 
     const resposta = await fetch('https://api.resend.com/emails', {
@@ -107,9 +146,9 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from: Deno.env.get('RESEND_FROM') || REMETENTE_PADRAO,
         to: [user.email],
-        subject: ASSUNTO_BOAS_VINDAS,
-        html: htmlBoasVindas(dados),
-        text: textoBoasVindas(dados),
+        subject: mensagem.assunto,
+        html: mensagem.html,
+        text: mensagem.texto,
         tags: [{ name: 'tipo', value: 'boas_vindas' }, { name: 'app', value: 'dfc_scale' }],
       }),
     })
